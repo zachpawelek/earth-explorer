@@ -1,13 +1,16 @@
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, Html } from "@react-three/drei";
 import { latLonToCartesian } from "./utils/coordinates.js";
 import Coastlines from "./components/Coastlines.jsx";
 import "./index.css";
 //import FirstTriangle from "./components/FirstTriangle.jsx";
 import ContinentFill from "./components/ContinentFill.jsx";
 import GlobeSurface from "./components/GlobeSurface.jsx";
+import TrackedOrbitControls from "./components/TrackedOrbitControls.jsx";
+import ViewHUD from "./components/ViewHUD.jsx";
+import { getViewMetrics } from "./utils/viewMetrics.js";
+import { Html } from "@react-three/drei";
 
 const DEBUG_LOCATIONS = [
   { name: "Front", lat: 0, lon: 0, color: "#ff4d6d" },
@@ -54,7 +57,14 @@ function DebugMarkers({ globeRef }) {
 function App() {
   const globeRef = useRef(null);
 
+  const [view, setView] = useState(() =>
+    getViewMetrics({ x: 0, y: 0, z: 3 })
+  );
+
+
+
   return (
+    <div className="globe-layout">
     <Canvas
       camera={{ position: [0, 0, 3] }}
       frameloop="demand"
@@ -82,15 +92,13 @@ function App() {
 
 
       {/* Coming from Drei  */}
-
-      <OrbitControls
-        target={[0, 0, 0]}
-        enablePan={false}
-        enableDamping={false}
-        minDistance={1.5}
-        maxDistance={6}
-      />
+      <TrackedOrbitControls onViewChange={setView} />
     </Canvas>
+
+
+    {/* OUTSIDE of Canvas -> bc HUD is ordinary HTML rather than a 3d Object   */}
+    <ViewHUD view={view} />
+    </div>
   );
 }
 

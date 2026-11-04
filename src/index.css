@@ -23,3 +23,59 @@ body {
   pointer-events: none;
   user-select: none;
 }
+
+
+.globe-layout {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.view-hud {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 10;
+  width: 265px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  background: rgba(7, 19, 33, 0.9);
+  color: white;
+  font-family: Arial, sans-serif;
+  pointer-events: none;
+}
+
+.view-hud-title {
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  color: #91aabb;
+  margin-bottom: 10px;
+}
+
+.view-hud-coordinates {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.view-hud-zoom {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.view-hud-track {
+  width: 100%;
+  height: 6px;
+  background: #263d4d;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.view-hud-fill {
+  height: 100%;
+  background: #76d9b9;
+}
