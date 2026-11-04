@@ -8,7 +8,7 @@ function formatCoordinate(value, positive, negative) {
   return `${Math.abs(value).toFixed(2)}° ${direction}`;
 }
 
-export default function ViewHUD({ view }) {
+export default function ViewHUD({ view, datasetResolution }) {
 
   // Determine the current viewing scale.
   // This is calculated from the camera distance
@@ -34,6 +34,12 @@ export default function ViewHUD({ view }) {
         <span>Viewing scale</span>
         <strong>{viewScale}</strong>
       </div>
+
+      {/* Current geographic dataset resolution */}
+    <div className="view-hud-scale">
+        <span>Geographic dataset</span>
+        <strong>{datasetResolution}</strong>
+    </div>
 
       {/* Zoom percentage */}
       <div className="view-hud-zoom">

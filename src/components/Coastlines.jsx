@@ -2,76 +2,74 @@
 import { useEffect, useState } from "react";
 import { buildCoastlinePositions } from "../utils/coastlineGeometry.js";
 
-export default function Coastlines() {
-  // Store the calculated vertex positions in React state.
-  // Initially null because the geographic data hasn't loaded yet.
-  const [positions, setPositions] = useState(null);
+
+export default function Coastlines({ coastlineUrl }) {
+  // Store geometry and the URL used to create it.
+  const [loaded, setLoaded] = useState(null);
 
   useEffect(() => {
-    // Allows us to cancel the request if the component unmounts.
     const controller = new AbortController();
 
     async function loadCoastlines() {
       try {
-        // 1. Load our locally stored GeoJSON file.
+        // 1. Request the selected coastline dataset.
         const response = await fetch(
-          "/data/coastlines.geojson",
+          coastlineUrl,
           { signal: controller.signal }
         );
 
-        // Throw an error if the HTTP response was unsuccessful.
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
         }
 
-        // 2. Parse the JSON response into a JavaScript object.
+        // 2. Parse the GeoJSON.
         const data = await response.json();
 
-        // 3. Convert geographic data into 3D vertex positions.
-        // Our utility handles all the mathematical calculations.
+        if (controller.signal.aborted) return;
+
+        // 3. Reuse our existing geometry calculation utility.
         const result = buildCoastlinePositions(data);
 
-        // Each line segment contains two 3D positions.
-        // Each position contains X, Y, and Z values.
+        if (controller.signal.aborted) return;
+
+        console.log("Loaded coastlines:", coastlineUrl);
         console.log("Coastline segments:", result.length / 6);
 
-        // 4. Update React state with the finished geometry.
-        setPositions(result);
+        // 4. Store the geometry for rendering.
+        setLoaded({
+          url: coastlineUrl,
+          positions: result,
+        });
 
       } catch (error) {
-        // Ignore intentional request cancellations.
-        // Log unexpected loading or processing errors.
         if (error.name !== "AbortError") {
           console.error("Failed to load coastlines:", error);
         }
       }
     }
 
-    // Start loading the geographic data.
     loadCoastlines();
 
-    // Cleanup: cancel any pending request.
+    // Cancel the request if the dataset changes.
     return () => controller.abort();
-  }, []);
+  }, [coastlineUrl]);
 
-  // Don't render geometry until the data is available.
-  if (positions === null) {
+  // Do not display geometry belonging to an old dataset.
+  if (loaded?.url !== coastlineUrl) {
     return null;
   }
 
-  // Render all coastlines using one Three.js LineSegments object.
   return (
     <lineSegments>
       <bufferGeometry>
-        {/* Each vertex contains three numbers: X, Y, and Z. */}
         <bufferAttribute
           attach="attributes-position"
-          args={[positions, 3]}
+          args={[loaded.positions, 3]}
         />
       </bufferGeometry>
 
-      {/* Set the color of our coastline lines. */}
       <lineBasicMaterial color="#8fe0c0" />
     </lineSegments>
   );
 }
+

@@ -11,6 +11,8 @@ import TrackedOrbitControls from "./components/TrackedOrbitControls.jsx";
 import ViewHUD from "./components/ViewHUD.jsx";
 import { getViewMetrics } from "./utils/viewMetrics.js";
 import { Html } from "@react-three/drei";
+import { getViewScale } from "./utils/viewScale.js";
+import { GEOGRAPHY_SOURCES } from "./utils/geographySources.js";
 
 const DEBUG_LOCATIONS = [
   { name: "Front", lat: 0, lon: 0, color: "#ff4d6d" },
@@ -60,6 +62,9 @@ function App() {
   const [view, setView] = useState(() =>
     getViewMetrics({ x: 0, y: 0, z: 3 })
   );
+  // Determine which datasets correspond to the current camera scale.
+    const viewScale = getViewScale(view.distance);
+    const geographySource = GEOGRAPHY_SOURCES[viewScale];
 
 
 
@@ -76,14 +81,19 @@ function App() {
         intensity={2}
       />
 
-      <GlobeSurface globeRef={globeRef} />
+      <GlobeSurface
+          globeRef={globeRef}
+          landUrl={geographySource.landUrl}
+      />
       
 
       {/* Components */}
 
       {/* <FirstTriangle /> */}
       {/* <ContinentFill />  */}
-      <Coastlines />
+      <Coastlines
+          coastlineUrl={geographySource.coastlineUrl}
+      />
 
 
 
@@ -97,7 +107,10 @@ function App() {
 
 
     {/* OUTSIDE of Canvas -> bc HUD is ordinary HTML rather than a 3d Object   */}
-    <ViewHUD view={view} />
+    <ViewHUD 
+      view={view} 
+      datasetResolution={geographySource.detail}
+    />
     </div>
   );
 }

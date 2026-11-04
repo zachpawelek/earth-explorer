@@ -137,79 +137,86 @@ function createLandTexture(data) {
   return texture;
 }
 
-export default function GlobeSurface({ globeRef }) {
-  // The texture isn't available until GeoJSON has loaded.
-  const [texture, setTexture] = useState(null);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    let createdTexture = null;
-
-    async function loadLand() {
-      try {
-        // 1. Load our locally stored land polygons.
-        const response = await fetch(
-          "/data/land.geojson",
-          { signal: controller.signal }
-        );
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-
-        // 2. Parse GeoJSON into a JavaScript object.
-        const data = await response.json();
-
-        // Ignore results from a cancelled request.
-        if (controller.signal.aborted) return;
-
-        // 3. Draw the polygons and create a texture.
-        const result = createLandTexture(data);
-        createdTexture = result;
-
-        console.log("Land features:", data.features.length);
-
-        // 4. Update React state so the globe displays it.
-        setTexture(result);
-
-      } catch (error) {
-        if (error.name !== "AbortError") {
-          console.error("Failed to load land:", error);
+export default function GlobeSurface({ globeRef, landUrl }) {
+    // Store the texture together with the dataset URL
+    // that was used to create it.
+    const [loaded, setLoaded] = useState(null);
+  
+    useEffect(() => {
+      const controller = new AbortController();
+      let createdTexture = null;
+  
+      async function loadLand() {
+        try {
+          // 1. Request the dataset selected by App.jsx.
+          const response = await fetch(
+            landUrl,
+            { signal: controller.signal }
+          );
+  
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+  
+          // 2. Parse the geographic data.
+          const data = await response.json();
+  
+          if (controller.signal.aborted) return;
+  
+          // 3. Convert the selected dataset into a texture.
+          const result = createLandTexture(data);
+          createdTexture = result;
+  
+          console.log("Loaded land dataset:", landUrl);
+          console.log("Land features:", data.features.length);
+  
+          // 4. Store the finished texture and its source.
+          setLoaded({
+            url: landUrl,
+            texture: result,
+          });
+  
+        } catch (error) {
+          if (error.name !== "AbortError") {
+            console.error("Failed to load land:", error);
+          }
         }
       }
-    }
-
-    loadLand();
-
-    // Cancel pending requests and release texture resources
-    // when this effect is cleaned up.
-    return () => {
-      controller.abort();
-      createdTexture?.dispose();
-    };
-  }, []);
-
-  return (
-    <mesh
-      ref={globeRef}
-      rotation={[0, -Math.PI / 2, 0]}
-    >
-      {/* Our existing spherical globe geometry. */}
-      <sphereGeometry args={[1, 64, 48]} />
-
-      {/* While loading, show a plain blue globe.
-          Once ready, render the geographic texture. */}
-      {texture ? (
-        <meshStandardMaterial
-          key="land"
-          map={texture}
-        />
-      ) : (
-        <meshStandardMaterial
-          key="ocean"
-          color="#287e9b"
-        />
-      )}
-    </mesh>
-  );
-}
+  
+      loadLand();
+  
+      // Cancel outdated requests and release the
+      // previous texture when the source changes.
+      return () => {
+        controller.abort();
+        createdTexture?.dispose();
+      };
+    }, [landUrl]);
+  
+    // Only display the texture if it belongs to
+    // the dataset currently selected by the camera.
+    const activeTexture =
+      loaded?.url === landUrl ? loaded.texture : null;
+  
+    return (
+      <mesh
+        ref={globeRef}
+        rotation={[0, -Math.PI / 2, 0]}
+      >
+        <sphereGeometry args={[1, 64, 48]} />
+  
+        {activeTexture ? (
+          <meshStandardMaterial
+            key="land"
+            map={activeTexture}
+          />
+        ) : (
+          <meshStandardMaterial
+            key="ocean"
+            color="#287e9b"
+          />
+        )}
+      </mesh>
+    );
+  }
+  
