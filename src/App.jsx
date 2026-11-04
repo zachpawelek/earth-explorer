@@ -5,6 +5,8 @@ import { OrbitControls, Html } from "@react-three/drei";
 import { latLonToCartesian } from "./utils/coordinates.js";
 import Coastlines from "./components/Coastlines.jsx";
 import "./index.css";
+import FirstTriangle from "./components/FirstTriangle.jsx";
+import ContinentFill from "./components/ContinentFill.jsx";
 
 const DEBUG_LOCATIONS = [
   { name: "Front", lat: 0, lon: 0, color: "#ff4d6d" },
@@ -73,6 +75,8 @@ function App() {
         <meshStandardMaterial color="#287e9b" />
       </mesh>
 
+      <FirstTriangle />
+      <ContinentFill />
       <Coastlines />
 
       <axesHelper args={[1.8]} />
