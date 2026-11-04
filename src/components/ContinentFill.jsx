@@ -1,9 +1,6 @@
 import { useEffect, useState } from "react";
-import { DoubleSide, ShapeUtils, Vector2 } from "three";
+import { DoubleSide, ShapeUtils, Vector2, Vector3 } from "three";
 import { latLonToCartesian } from "../utils/coordinates.js";
-
-
-
 
 /*
 
@@ -24,8 +21,81 @@ We are doing this because:
 // Place the filled polygon slightly above the globe surface.
 const RADIUS = 1.02;
 
+  /* Why 2 divisions? to reduce complexity When comparing subdivisons to new triangles (per original)
+    Ex. 0 -> 1
+        1 -> 4
+        2 -> 16
+        3 -> 64
+  */
+const SUBDIVISION_LEVELS = 2;
+
 // Approximate planar area using the shoelace formula.
 // This helps us choose a reasonably large polygon for testing.
+
+
+/*
+
+  Example to help understand the shoelace formula: 
+    used to find the area of a polygon given the coordinates of its verticies. 
+
+    Ex. a Triangle with the verticies [(2,4), (3, -8), (1,2)]
+
+      1. Stack the coordinates and repeat the first one (to 'close' the loop)
+        2 4
+        3 -8
+        1 2
+        2 4
+
+      2. Downward Diagonals: 2*-8=-16, 3*2=6, 1*4=4     -> Sum = -6
+      3. Upward Diagonals: 4*3=12, -8*1=-8, 2*2=4       -> Sum = 8
+
+      Area = 1/2 * | (-6)-8 | = 14/2 = 7
+
+
+
+
+
+
+*/
+
+
+// Calculate the midpoint between two 3D positions.
+// Normalize the result so it lies on the sphere's surface.
+function midpointOnSphere(a, b) {
+  return a
+    .clone()
+    .add(b)
+    .normalize()
+    .multiplyScalar(RADIUS);
+}
+
+
+// Recursively divide one triangle into smaller triangles.
+function addSubdividedTriangle(a, b, c, levels, vertices) {
+
+  // Base case: stop subdividing and store the triangle.
+  if (levels === 0) {
+    vertices.push(
+      a.x, a.y, a.z,
+      b.x, b.y, b.z,
+      c.x, c.y, c.z
+    );
+
+    return;
+  }
+
+  // Calculate the midpoint of each triangle edge.
+  const ab = midpointOnSphere(a, b);
+  const bc = midpointOnSphere(b, c);
+  const ca = midpointOnSphere(c, a);
+
+  // Divide the original triangle into four smaller triangles.
+  addSubdividedTriangle(a, ab, ca, levels - 1, vertices);
+  addSubdividedTriangle(ab, b, bc, levels - 1, vertices);
+  addSubdividedTriangle(ca, bc, c, levels - 1, vertices);
+  addSubdividedTriangle(ab, bc, ca, levels - 1, vertices);
+}
+
 function ringArea(ring) {
   let area = 0;
 
@@ -146,26 +216,30 @@ export default function ContinentFill() {
           []
         );
 
+        
         const vertices = [];
 
-        // Convert each triangle vertex from lon/lat to XYZ.
+        // Process every triangle produced by ShapeUtils.triangulateShape().
         for (const [a, b, c] of faces) {
-          const trianglePoints = [
-            uniqueRing[a],
-            uniqueRing[b],
-            uniqueRing[c],
-          ];
 
-          for (const [longitude, latitude] of trianglePoints) {
-            const point = latLonToCartesian(
-              latitude,
-              longitude,
-              RADIUS
-            );
+          // Convert the three geographic vertices into 3D Vector3 objects.
+          const trianglePoints = [a, b, c].map((index) => {
+          const [longitude, latitude] = uniqueRing[index];
 
-            vertices.push(...point);
-          }
-        }
+          return new Vector3(
+          ...latLonToCartesian(latitude, longitude, RADIUS)
+      );
+  });
+
+  // Subdivide the triangle and project the new vertices
+  // onto the surface of our sphere.
+  addSubdividedTriangle(
+    ...trianglePoints,
+    SUBDIVISION_LEVELS,
+    vertices
+  );
+}
+
 
         const result = new Float32Array(vertices);
 

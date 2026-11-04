@@ -5,8 +5,9 @@ import { OrbitControls, Html } from "@react-three/drei";
 import { latLonToCartesian } from "./utils/coordinates.js";
 import Coastlines from "./components/Coastlines.jsx";
 import "./index.css";
-import FirstTriangle from "./components/FirstTriangle.jsx";
+//import FirstTriangle from "./components/FirstTriangle.jsx";
 import ContinentFill from "./components/ContinentFill.jsx";
+import GlobeSurface from "./components/GlobeSurface.jsx";
 
 const DEBUG_LOCATIONS = [
   { name: "Front", lat: 0, lon: 0, color: "#ff4d6d" },
@@ -25,11 +26,7 @@ const DEBUG_LOCATIONS = [
 
 function DebugMarkers({ globeRef }) {
   return DEBUG_LOCATIONS.map((location) => {
-    const position = latLonToCartesian(
-      location.lat,
-      location.lon,
-      1.1
-    );
+    const position = latLonToCartesian(location.lat, location.lon, 1.1);
 
     return (
       <group key={location.name} position={position}>
@@ -69,18 +66,22 @@ function App() {
         intensity={2}
       />
 
-      {/* Globe */}
-      <mesh ref={globeRef}>
-        <sphereGeometry args={[1, 32, 32]} />
-        <meshStandardMaterial color="#287e9b" />
-      </mesh>
+      <GlobeSurface globeRef={globeRef} />
+      
 
-      <FirstTriangle />
-      <ContinentFill />
+      {/* Components */}
+
+      {/* <FirstTriangle /> */}
+      {/* <ContinentFill />  */}
       <Coastlines />
+
+
 
       <axesHelper args={[1.8]} />
       <DebugMarkers globeRef={globeRef} />
+
+
+      {/* Coming from Drei  */}
 
       <OrbitControls
         target={[0, 0, 0]}

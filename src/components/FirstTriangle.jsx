@@ -11,7 +11,7 @@ const TRIANGLE_COORDINATES = [
   ];
 
 // Convert each geographic position into Cartesian coordinates.
-// A radius of 1.025 puts the triangle slightly above our globe.
+// A radius of 1.x puts the triangle slightly above our globe.
 const positions = new Float32Array(
   TRIANGLE_COORDINATES.flatMap(([longitude, latitude]) =>
     latLonToCartesian(latitude, longitude, 1.12)
@@ -22,6 +22,7 @@ export default function TestLandTriangle() {
   return (
     <mesh renderOrder={10}>
       <bufferGeometry>
+        
         {/* Every vertex contains X, Y, and Z values. */}
         <bufferAttribute
           attach="attributes-position"
