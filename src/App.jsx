@@ -13,6 +13,7 @@ import { getViewMetrics } from "./utils/viewMetrics.js";
 import { Html } from "@react-three/drei";
 import { getViewScale } from "./utils/viewScale.js";
 import { GEOGRAPHY_SOURCES } from "./utils/geographySources.js";
+import { useGeographyLayers } from "./hooks/useGeographyLayers.js";
 
 const DEBUG_LOCATIONS = [
   { name: "Front", lat: 0, lon: 0, color: "#ff4d6d" },
@@ -66,6 +67,15 @@ function App() {
     const viewScale = getViewScale(view.distance);
     const geographySource = GEOGRAPHY_SOURCES[viewScale];
 
+    // Prepare land and coastline data as one coordinated pair.
+  const {
+    rendered,
+    isLoading,
+    error,
+    } = useGeographyLayers(geographySource);
+
+
+
 
 
   return (
@@ -82,8 +92,8 @@ function App() {
       />
 
       <GlobeSurface
-          globeRef={globeRef}
-          landUrl={geographySource.landUrl}
+        globeRef={globeRef}
+        texture={rendered?.texture ?? null}
       />
       
 
@@ -92,7 +102,7 @@ function App() {
       {/* <FirstTriangle /> */}
       {/* <ContinentFill />  */}
       <Coastlines
-          coastlineUrl={geographySource.coastlineUrl}
+        positions={rendered?.positions ?? null}
       />
 
 
@@ -107,9 +117,11 @@ function App() {
 
 
     {/* OUTSIDE of Canvas -> bc HUD is ordinary HTML rather than a 3d Object   */}
-    <ViewHUD 
-      view={view} 
-      datasetResolution={geographySource.detail}
+    <ViewHUD
+      view={view}
+      datasetResolution={rendered?.detail ?? "—"}
+      isLoading={isLoading}
+      loadError={error}
     />
     </div>
   );

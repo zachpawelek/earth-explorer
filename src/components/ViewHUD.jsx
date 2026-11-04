@@ -8,7 +8,12 @@ function formatCoordinate(value, positive, negative) {
   return `${Math.abs(value).toFixed(2)}° ${direction}`;
 }
 
-export default function ViewHUD({ view, datasetResolution }) {
+export default function ViewHUD({
+    view,
+    datasetResolution,
+    isLoading,
+    loadError,
+  }) {
 
   // Determine the current viewing scale.
   // This is calculated from the camera distance
@@ -40,6 +45,25 @@ export default function ViewHUD({ view, datasetResolution }) {
         <span>Geographic dataset</span>
         <strong>{datasetResolution}</strong>
     </div>
+
+    {/* Show when the next geographic dataset is loading. */}
+        {isLoading && (
+            <div className="view-hud-status" role="status">
+                Preparing map detail...
+            </div>
+        )}
+
+    {/* Show an error without hiding the existing globe. */}
+        {loadError && (
+            <div className="view-hud-status view-hud-error" role="alert">
+                Could not load the requested map detail.
+             </div>
+        )}
+
+
+
+
+
 
       {/* Zoom percentage */}
       <div className="view-hud-zoom">

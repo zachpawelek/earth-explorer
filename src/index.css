@@ -92,3 +92,16 @@ body {
 .view-hud-scale strong {
   color: #76d9b9;
 }
+
+
+/* Geographic layer loading status. */
+.view-hud-status {
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: #76d9b9;
+}
+
+/* Display geographic loading errors clearly. */
+.view-hud-error {
+  color: #ffb4a2;
+}
