@@ -3,6 +3,7 @@ import { useRef } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Html } from "@react-three/drei";
 import { latLonToCartesian } from "./utils/coordinates.js";
+import Coastlines from "./components/Coastlines.jsx";
 import "./index.css";
 
 const DEBUG_LOCATIONS = [
@@ -71,6 +72,8 @@ function App() {
         <sphereGeometry args={[1, 32, 32]} />
         <meshStandardMaterial color="#287e9b" />
       </mesh>
+
+      <Coastlines />
 
       <axesHelper args={[1.8]} />
       <DebugMarkers globeRef={globeRef} />
