@@ -9,3 +9,17 @@ body,
 body {
   background-color: #071321;
 }
+
+.marker-label {
+  background: rgba(10, 20, 35, 0.9);
+  color: white;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 9px;
+  border-radius: 5px;
+  white-space: nowrap;
+  transform: translateY(-24px);
+  pointer-events: none;
+  user-select: none;
+}
