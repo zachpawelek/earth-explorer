@@ -105,3 +105,12 @@ body {
 .view-hud-error {
   color: #ffb4a2;
 }
+
+
+/* Explanation beneath the HUD's horizon measurements. */
+.view-hud-note {
+  font-size: 11px;
+  line-height: 1.4;
+  color: #91aabb;
+  margin: -4px 0 12px;
+}
