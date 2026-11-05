@@ -15,6 +15,9 @@ export default function ViewHUD({
   datasetResolution,
   isLoading,
   loadError,
+  selectedCountry,
+  countryDataReady,
+  countryLoadError,
 }) {
 
   // Classify the camera's current viewing scale.
@@ -32,6 +35,21 @@ export default function ViewHUD({
 
   return (
     <aside className="view-hud">
+
+<div className="view-hud-title">
+  SELECTED COUNTRY
+</div>
+
+<div className="view-hud-coordinates">
+  {countryLoadError
+    ? "Country data unavailable"
+    : !countryDataReady
+      ? "Loading country names..."
+      : selectedCountry === undefined
+        ? "Click a country"
+        : selectedCountry ?? "Ocean / unmapped area"}
+</div>
+
 
       {/* Current geographic center of the view */}
       <div className="view-hud-title">

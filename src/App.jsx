@@ -1,5 +1,5 @@
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Canvas } from "@react-three/fiber";
 import { latLonToCartesian } from "./utils/coordinates.js";
 import Coastlines from "./components/Coastlines.jsx";
@@ -14,6 +14,11 @@ import { Html } from "@react-three/drei";
 import { getViewScale } from "./utils/viewScale.js";
 import { GEOGRAPHY_SOURCES } from "./utils/geographySources.js";
 import { useGeographyLayers } from "./hooks/useGeographyLayers.js";
+import CountryBorders from "./components/CountryBorders.jsx";
+import { loadGeoJSON } from "./utils/geographyCache.js";
+import { findCountryName } from "./utils/countryLookup.js";
+
+
 
 const DEBUG_LOCATIONS = [
   { name: "Front", lat: 0, lon: 0, color: "#ff4d6d" },
@@ -60,6 +65,29 @@ function DebugMarkers({ globeRef }) {
 function App() {
   const globeRef = useRef(null);
 
+
+const [countries, setCountries] = useState(null);
+const [countryLoadError, setCountryLoadError] = useState(false);
+const [selectedCountry, setSelectedCountry] = useState(undefined);
+
+useEffect(() => {
+  let active = true;
+
+  loadGeoJSON("/data/countries-50m.geojson")
+    .then((data) => {
+      if (active) setCountries(data.features);
+    })
+    .catch((error) => {
+      console.error("Country lookup data failed:", error);
+      if (active) setCountryLoadError(true);
+    });
+
+  return () => {
+    active = false;
+  };
+}, []);
+
+
   const [view, setView] = useState(() =>
     getViewMetrics({ x: 0, y: 0, z: 3 })
   );
@@ -76,6 +104,28 @@ function App() {
 
 
 
+    function handleGlobeClick(event) {
+      // Ignore dragging or clicks before country data is loaded.
+      if (event.delta > 5 || !countries) return;
+    
+      const { x, y, z } = event.point;
+      const radius = Math.hypot(x, y, z);
+    
+      const latitude =
+        Math.asin(y / radius) * 180 / Math.PI;
+    
+      const longitude =
+        Math.atan2(x, z) * 180 / Math.PI;
+    
+      const countryName = findCountryName(
+        countries,
+        longitude,
+        latitude
+      );
+    
+      setSelectedCountry(countryName);
+    }
+    
 
 
   return (
@@ -94,6 +144,7 @@ function App() {
       <GlobeSurface
         globeRef={globeRef}
         texture={rendered?.texture ?? null}
+        onGlobeClick={handleGlobeClick}
       />
       
 
@@ -104,6 +155,8 @@ function App() {
       <Coastlines
         positions={rendered?.positions ?? null}
       />
+
+      <CountryBorders />
 
 
 
@@ -122,6 +175,9 @@ function App() {
       datasetResolution={rendered?.detail ?? "—"}
       isLoading={isLoading}
       loadError={error}
+      selectedCountry={selectedCountry}
+      countryDataReady={countries !== null}
+      countryLoadError={countryLoadError}
     />
     </div>
   );

@@ -1,10 +1,8 @@
-
-export default function Coastlines({ positions }) {
-
-  // No geometry is available during the initial load.
-  if (!positions) {
-    return null;
-  }
+export default function Coastlines({
+  positions,
+  color = "#8fe0c0",
+}) {
+  if (!positions) return null;
 
   return (
     <lineSegments>
@@ -15,7 +13,7 @@ export default function Coastlines({ positions }) {
         />
       </bufferGeometry>
 
-      <lineBasicMaterial color="#8fe0c0" />
+      <lineBasicMaterial color={color} />
     </lineSegments>
   );
 }
