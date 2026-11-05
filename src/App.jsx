@@ -4,8 +4,6 @@ import { Canvas } from "@react-three/fiber";
 import { latLonToCartesian } from "./utils/coordinates.js";
 import Coastlines from "./components/Coastlines.jsx";
 import "./index.css";
-//import FirstTriangle from "./components/FirstTriangle.jsx";
-import ContinentFill from "./components/ContinentFill.jsx";
 import GlobeSurface from "./components/GlobeSurface.jsx";
 import TrackedOrbitControls from "./components/TrackedOrbitControls.jsx";
 import ViewHUD from "./components/ViewHUD.jsx";
@@ -17,6 +15,7 @@ import { useGeographyLayers } from "./hooks/useGeographyLayers.js";
 import CountryBorders from "./components/CountryBorders.jsx";
 import { loadGeoJSON } from "./utils/geographyCache.js";
 import { findCountryName } from "./utils/countryLookup.js";
+import CityMarkers from "./components/CityMarkers.jsx";
 
 
 
@@ -69,6 +68,7 @@ function App() {
 const [countries, setCountries] = useState(null);
 const [countryLoadError, setCountryLoadError] = useState(false);
 const [selectedCountry, setSelectedCountry] = useState(undefined);
+const [selectedCity, setSelectedCity] = useState(null);
 
 useEffect(() => {
   let active = true;
@@ -125,6 +125,20 @@ useEffect(() => {
     
       setSelectedCountry(countryName);
     }
+
+    function handleCitySelect(city) {
+      setSelectedCity(city);
+    
+      setSelectedCountry(
+        countries
+          ? findCountryName(
+              countries,
+              city.longitude,
+              city.latitude
+            )
+          : undefined
+      );
+    }
     
 
 
@@ -155,6 +169,7 @@ useEffect(() => {
       <Coastlines
         positions={rendered?.positions ?? null}
       />
+      <CityMarkers onCitySelect={handleCitySelect} />
 
       <CountryBorders />
 
@@ -178,6 +193,7 @@ useEffect(() => {
       selectedCountry={selectedCountry}
       countryDataReady={countries !== null}
       countryLoadError={countryLoadError}
+      selectedCity={selectedCity}
     />
     </div>
   );

@@ -105,3 +105,35 @@ body {
 .view-hud-error {
   color: #ffb4a2;
 }
+.city-label {
+  display: inline-block;
+  position: relative;
+  transform: translateY(-20px);
+
+  color: #fff7e8;
+  font-family: Arial, sans-serif;
+  font-size: 3px;
+  font-weight: 100;
+  line-height: 1;
+  white-space: nowrap;
+
+  text-shadow:
+    0 1px 3px #081421,
+    0 0 5px #081421;
+
+  pointer-events: none;
+  user-select: none;
+
+  opacity: 0;
+  transition: opacity 120ms linear;
+}
+
+.city-label--medium {
+  font-size: 4px;
+  font-weight: 300;
+}
+
+.city-label--major {
+  font-size: 12px;
+  font-weight: 500;
+}

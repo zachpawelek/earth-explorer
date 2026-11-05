@@ -1,8 +1,8 @@
 
 // Camera-distance thresholds for our current globe.
 // Larger distances mean the camera is farther from Earth.
-const GLOBAL_DISTANCE = 4.0;
-const REGIONAL_DISTANCE = 2.5;
+const GLOBAL_DISTANCE = 3.2;
+const REGIONAL_DISTANCE = 2.0;
 
 // Determine the viewing scale based on camera distance.
 export function getViewScale(distance) {

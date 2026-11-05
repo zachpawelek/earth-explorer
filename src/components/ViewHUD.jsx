@@ -14,6 +14,7 @@ export default function ViewHUD({
   selectedCountry,
   countryDataReady,
   countryLoadError,
+  selectedCity,
 }) {
   const viewScale = getViewScale(view.distance);
 
@@ -31,6 +32,11 @@ export default function ViewHUD({
 
   return (
     <aside className="view-hud">
+      <div className="view-hud-title">SELECTED CITY</div>
+
+      <div className="view-hud-coordinates">
+        {selectedCity?.name ?? "Click an orange city marker"}
+      </div>
       <div className="view-hud-title">SELECTED COUNTRY</div>
       <div className="view-hud-coordinates">{countryLabel}</div>
 
