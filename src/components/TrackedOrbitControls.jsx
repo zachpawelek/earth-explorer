@@ -2,6 +2,8 @@
 import { useCallback, useEffect } from "react";
 import { useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
+import { getGeographicCoverage } from "../utils/geographicCoverage.js";
+import { selectGeographicTiles } from "../utils/geographicTiles.js";
 
 import {
   getViewMetrics,
@@ -31,10 +33,23 @@ export default function TrackedOrbitControls({
     // NEW: Calculate the visible geographic footprint.
     const footprint = getViewportFootprint(camera);
 
+    // Bound every visible point in latitude/longitude. These bounds are
+    // deliberately safe rather than a tight fit to the 24 sampled points.
+    const geographicCoverage = getGeographicCoverage({
+        center: footprint.center,
+        cameraDistance: metrics.distance,
+        verticalFovDegrees: camera.getEffectiveFOV(),
+        aspect: camera.aspect,
+    });
+
+    const selectedTiles = selectGeographicTiles(geographicCoverage);
+
     // Send everything to App.jsx in one state update.
     onViewChange({
       ...metrics,
       footprint,
+      geographicCoverage,
+      selectedTiles,
     });
 
   }, [camera, onViewChange]);
