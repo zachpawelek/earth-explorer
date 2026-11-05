@@ -105,29 +105,3 @@ body {
 .view-hud-error {
   color: #ffb4a2;
 }
-
-
-/* Explanation beneath the HUD's horizon measurements. */
-.view-hud-note {
-  font-size: 11px;
-  line-height: 1.4;
-  color: #91aabb;
-  margin: -4px 0 12px;
-}
-
-.tile-preview-grid {
-  display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 2px;
-  margin-bottom: 12px;
-}
-
-.tile-preview-cell {
-  aspect-ratio: 1.6;
-  border-radius: 2px;
-  background: #263d4d;
-}
-
-.tile-preview-cell--selected {
-  background: #76d9b9;
-}
