@@ -71,6 +71,8 @@ export default function CityMarkers({ onCitySelect }) {
               latitude,
               prominence,
               population,
+              wikidataId: properties.WIKIDATAID || null,
+              countryName: properties.ADM0NAME || null,
 
               // Smaller orange markers, scaled by population.
               markerRadius: 0.004 + 0.0045 * size,

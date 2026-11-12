@@ -16,7 +16,7 @@ import CountryBorders from "./components/CountryBorders.jsx";
 import { loadGeoJSON } from "./utils/geographyCache.js";
 import { findCountryName } from "./utils/countryLookup.js";
 import CityMarkers from "./components/CityMarkers.jsx";
-
+import CityDiscoveryPanel from "./components/CityDiscoveryPanel.jsx";
 
 
 const DEBUG_LOCATIONS = [
@@ -124,6 +124,7 @@ useEffect(() => {
       );
     
       setSelectedCountry(countryName);
+      setSelectedCity(null);
     }
 
     function handleCitySelect(city) {
@@ -182,6 +183,12 @@ useEffect(() => {
       {/* Coming from Drei  */}
       <TrackedOrbitControls onViewChange={setView} />
     </Canvas>
+
+
+    <CityDiscoveryPanel
+    city={selectedCity}
+    onClose={() => setSelectedCity(null)}
+    />
 
 
     {/* OUTSIDE of Canvas -> bc HUD is ordinary HTML rather than a 3d Object   */}

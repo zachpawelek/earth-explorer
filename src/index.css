@@ -137,3 +137,93 @@ body {
   font-size: 12px;
   font-weight: 500;
 }
+
+
+.city-discovery-panel {
+  position: absolute;
+  z-index: 20;
+  top: 20px;
+  right: 20px;
+  box-sizing: border-box;
+  width: min(340px, calc(100% - 40px));
+  max-height: calc(100% - 40px);
+  overflow-y: auto;
+  padding: 18px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(7, 19, 33, 0.96);
+  color: white;
+  font-family: Arial, sans-serif;
+}
+
+.city-discovery-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.city-discovery-heading h2 {
+  margin: 6px 0 2px;
+  font-size: 22px;
+}
+
+.city-discovery-heading p {
+  margin: 0 0 16px;
+  color: #91aabb;
+}
+
+.city-discovery-eyebrow {
+  font-size: 10px;
+  color: #76d9b9;
+  letter-spacing: 1px;
+}
+
+.city-discovery-heading button {
+  border: 0;
+  background: transparent;
+  color: white;
+  cursor: pointer;
+  font-size: 26px;
+}
+
+.city-discovery-person h3 {
+  margin: 8px 0;
+  font-size: 19px;
+}
+
+.city-discovery-person p {
+  color: #d0dce3;
+  font-size: 13px;
+}
+
+.city-discovery-score {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 16px 0;
+}
+
+.city-discovery-score strong {
+  color: #76d9b9;
+  font-size: 24px;
+}
+
+.city-discovery-score span,
+.city-discovery-note {
+  color: #91aabb;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.city-discovery-panel a {
+  color: #76d9b9;
+  font-size: 13px;
+}
+
+@media (max-width: 720px) {
+  .city-discovery-panel {
+    top: auto;
+    bottom: 20px;
+  }
+}
