@@ -11,6 +11,7 @@ import { getViewScale } from "./utils/viewScale.js";
 import { GEOGRAPHY_SOURCES } from "./utils/geographySources.js";
 import { useGeographyLayers } from "./hooks/useGeographyLayers.js";
 import CountryBorders from "./components/CountryBorders.jsx";
+import Admin1Borders from "./components/Admin1Borders.jsx";
 import { loadGeoJSON } from "./utils/geographyCache.js";
 import { findCountryName } from "./utils/countryLookup.js";
 import CityMarkers from "./components/CityMarkers.jsx";
@@ -131,6 +132,7 @@ useEffect(() => {
       <CityMarkers onCitySelect={handleCitySelect} />
       <TownMarkers view={view} viewScale={viewScale} onCitySelect={handleCitySelect} />
 
+      <Admin1Borders cameraDistance={view.distance} />
       <CountryBorders />
 
 

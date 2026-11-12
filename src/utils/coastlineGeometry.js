@@ -4,14 +4,14 @@ import { latLonToCartesian } from "./coordinates.js";
 
 // Place coastline vertices slightly above the globe's surface.
 // Our globe has a radius of 1.
-const RADIUS = 1.01;
+const DEFAULT_RADIUS = 1.01;
 
 // Maximum angular separation between generated line vertices.
 // Math.PI / 180 represents 1 degree in radians.
 const MAX_SEGMENT_ANGLE = Math.PI / 180;
 
 // Convert one geographic path into connected 3D line segments.
-function addPathSegments(coordinates, vertices) {
+function addPathSegments(coordinates, vertices, radius) {
   // Process each consecutive pair of geographic coordinates.
   for (let i = 0; i < coordinates.length - 1; i++) {
     // GeoJSON stores coordinate pairs as [longitude, latitude].
@@ -50,13 +50,13 @@ function addPathSegments(coordinates, vertices) {
         .clone()
         .lerp(end, t1)
         .normalize()
-        .multiplyScalar(RADIUS);
+        .multiplyScalar(radius);
 
       const point2 = start
         .clone()
         .lerp(end, t2)
         .normalize()
-        .multiplyScalar(RADIUS);
+        .multiplyScalar(radius);
 
       // Store both endpoints of this independent line segment.
       vertices.push(
@@ -69,7 +69,7 @@ function addPathSegments(coordinates, vertices) {
 
 // Convert an entire GeoJSON FeatureCollection
 // into a single Float32Array of line-segment positions.
-export function buildCoastlinePositions(data) {
+export function buildCoastlinePositions(data, radius = DEFAULT_RADIUS) {
   const vertices = [];
 
   // Process every geographic feature.
@@ -92,7 +92,7 @@ export function buildCoastlinePositions(data) {
 
     // Process each coastline independently.
     for (const coordinates of paths) {
-      addPathSegments(coordinates, vertices);
+      addPathSegments(coordinates, vertices, radius);
     }
   }
 

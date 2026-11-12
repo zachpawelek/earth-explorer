@@ -12,15 +12,16 @@ import { buildCoastlinePositions } from "./coastlineGeometry.js";
  */
 const coastlinePositionsCache = new Map();
 
-export function loadCoastlinePositions(url) {
+export function loadCoastlinePositions(url, radius = 1.01) {
+  const key = `${url}|${radius}`;
 
   // STEP 1:
   // Check whether we've already requested or built
   // the coastline geometry for this dataset.
-  if (coastlinePositionsCache.has(url)) {
+  if (coastlinePositionsCache.has(key)) {
     console.log("[Geometry cache] HIT:", url);
 
-    return coastlinePositionsCache.get(url);
+    return coastlinePositionsCache.get(key);
   }
 
   // STEP 2:
@@ -32,7 +33,7 @@ export function loadCoastlinePositions(url) {
 
       // Generate coastline vertex positions using
       // our existing geometry utility.
-      const positions = buildCoastlinePositions(data);
+      const positions = buildCoastlinePositions(data, radius);
 
       console.log(
         "[Geometry cache] BUILT:",
@@ -48,7 +49,7 @@ export function loadCoastlinePositions(url) {
 
       // If processing fails, remove the failed entry
       // so a subsequent request can try again.
-      coastlinePositionsCache.delete(url);
+      coastlinePositionsCache.delete(key);
 
       throw error;
     });
@@ -56,7 +57,7 @@ export function loadCoastlinePositions(url) {
   // STEP 3:
   // Store the Promise immediately.
   // Multiple callers can share the same calculation.
-  coastlinePositionsCache.set(url, request);
+  coastlinePositionsCache.set(key, request);
 
   return request;
 }
