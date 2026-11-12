@@ -24,3 +24,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local downloaded research datasets (processed app data lives in public/data).
+data-sources/
+
+# Python build scripts
+__pycache__/
+*.pyc

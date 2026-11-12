@@ -7,76 +7,85 @@ import re
 import sys
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-OUTPUT_PATH = PROJECT_ROOT / "public/data/pantheon-index.json"
+ROOT = Path(__file__).resolve().parents[1]
+OUTPUT = ROOT / "public/data/pantheon-index.json"
+QID = re.compile(r"Q[1-9]\d*")
 
 
-def build_index(source_path):
+def build_index(source, destination=OUTPUT):
     people = {}
 
-    # Read the compressed Pantheon CSV without extracting it manually.
-    with bz2.open(source_path, "rt", encoding="utf-8-sig", newline="") as file:
-        reader = csv.DictReader(file)
-        columns = reader.fieldnames or []
+    with bz2.open(
+        source, "rt", encoding="utf-8-sig", newline=""
+    ) as stream:
+        reader = csv.DictReader(stream)
+        columns = set(reader.fieldnames or [])
 
-        print("Dataset columns:", columns)
+        required = {"wd_id", "hpi", "bplace_name", "l"}
+        missing = required - columns
 
-        def find_column(*names):
-            return next((name for name in names if name in columns), None)
-
-        id_column = find_column("wd_id", "wikidata_id", "wikidataid")
-        hpi_column = find_column("hpi", "HPI")
-        birthplace_column = find_column(
-            "bplace_name", "birth_place", "birthplace", "birthcity"
-        )
-
-        if not id_column or not hpi_column:
+        if missing:
             raise ValueError(
-                "Could not locate Wikidata ID and HPI columns. "
-                f"Available columns: {columns}"
+                f"Pantheon CSV missing columns: {sorted(missing)}"
             )
 
         for row in reader:
-            person_id = (row.get(id_column) or "").strip()
+            person_id = (row.get("wd_id") or "").strip()
 
-            if not re.fullmatch(r"Q[1-9]\d*", person_id):
+            if not QID.fullmatch(person_id):
                 continue
 
             try:
-                hpi = float(row.get(hpi_column) or "")
-            except ValueError:
+                hpi = float(row["hpi"])
+            except (ValueError, TypeError):
                 continue
 
-            if not math.isfinite(hpi):
+            if not math.isfinite(hpi) or not 0 <= hpi <= 100:
                 continue
 
-            birthplace = (
-                (row.get(birthplace_column) or "").strip()
-                if birthplace_column
-                else ""
-            )
+            try:
+                languages = float(row["l"])
+                languages = (
+                    int(languages)
+                    if math.isfinite(languages) and languages >= 0
+                    else None
+                )
+            except (ValueError, TypeError):
+                languages = None
 
             people[person_id] = {
                 "hpi": round(hpi, 2),
-                "birthplace": birthplace or None,
+                "birthplace": (
+                    row.get("bplace_name") or ""
+                ).strip() or None,
+                "languages": languages,
             }
 
-    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    destination.parent.mkdir(
+        parents=True, exist_ok=True
+    )
 
-    with open(OUTPUT_PATH, "w", encoding="utf-8") as output:
-        json.dump({
-            "source": "Pantheon 2025",
-            "people": people,
-        }, output, separators=(",", ":"))
+    destination.write_text(
+        json.dumps(
+            {
+                "source": "Pantheon 2025",
+                "people": people,
+            },
+            separators=(",", ":"),
+        ),
+        encoding="utf-8",
+    )
 
-    print(f"Successfully indexed {len(people)} people")
-    print(f"Output: {OUTPUT_PATH}")
+    print(
+        f"Indexed {len(people)} people: {destination}"
+    )
 
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         raise SystemExit(
-            "Usage: python3 scripts/build_pantheon_index.py <dataset.csv.bz2>"
+            "Usage: python3 scripts/build_pantheon_index.py "
+            "<dataset.csv.bz2>"
         )
 
     build_index(Path(sys.argv[1]))

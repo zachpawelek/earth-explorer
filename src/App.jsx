@@ -16,6 +16,7 @@ import CountryBorders from "./components/CountryBorders.jsx";
 import { loadGeoJSON } from "./utils/geographyCache.js";
 import { findCountryName } from "./utils/countryLookup.js";
 import CityMarkers from "./components/CityMarkers.jsx";
+import TownMarkers from "./components/TownMarkers.jsx";
 import CityDiscoveryPanel from "./components/CityDiscoveryPanel.jsx";
 
 
@@ -128,17 +129,11 @@ useEffect(() => {
     }
 
     function handleCitySelect(city) {
-      setSelectedCity(city);
-    
-      setSelectedCountry(
-        countries
-          ? findCountryName(
-              countries,
-              city.longitude,
-              city.latitude
-            )
-          : undefined
-      );
+      const countryName = countries
+        ? findCountryName(countries, city.longitude, city.latitude)
+        : city.countryName;
+      setSelectedCity({ ...city, countryName: countryName || city.countryName });
+      setSelectedCountry(countryName);
     }
     
 
@@ -171,6 +166,7 @@ useEffect(() => {
         positions={rendered?.positions ?? null}
       />
       <CityMarkers onCitySelect={handleCitySelect} />
+      <TownMarkers view={view} viewScale={viewScale} onCitySelect={handleCitySelect} />
 
       <CountryBorders />
 
@@ -202,6 +198,11 @@ useEffect(() => {
       countryLoadError={countryLoadError}
       selectedCity={selectedCity}
     />
+      <div className="data-attribution">
+        Additional populated places: <a href="https://www.geonames.org/" target="_blank" rel="noopener noreferrer">GeoNames</a>
+        {" · "}<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>
+        {" · "}Modified for Earth Explorer
+      </div>
     </div>
   );
 }

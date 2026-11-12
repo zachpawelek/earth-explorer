@@ -2,6 +2,8 @@
 const WIKIDATA_ID = /^Q[1-9]\d*$/;
 const SCORE_REFERENCE = Math.log1p(300);
 
+export const CANDIDATE_LIMIT = 50;
+
 export function getFameIndex(sitelinks) {
   const count = Number(sitelinks);
 
@@ -11,7 +13,9 @@ export function getFameIndex(sitelinks) {
 
   return Math.min(
     100,
-    Math.round((100 * Math.log1p(count)) / SCORE_REFERENCE)
+    Math.round(
+      (100 * Math.log1p(count)) / SCORE_REFERENCE
+    )
   );
 }
 
@@ -30,28 +34,34 @@ export function buildBirthplaceQuery(cityId) {
   }
 
   return `
-SELECT ?person ?personLabel ?personDescription ?sitelinks WHERE {
+SELECT ?person ?personLabel ?personDescription ?enwikiTitle ?sitelinks WHERE {
   {
-    SELECT ?person ?sitelinks WHERE {
+    SELECT DISTINCT ?person ?sitelinks WHERE {
       ?person wdt:P31 wd:Q5;
-              wdt:P19 wd:${cityId};
+              wdt:P19/wdt:P131* wd:${cityId};
               wikibase:sitelinks ?sitelinks.
     }
     ORDER BY DESC(?sitelinks)
-    LIMIT 10
+    LIMIT ${CANDIDATE_LIMIT}
   }
-  SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+  OPTIONAL {
+    ?article schema:about ?person;
+             schema:isPartOf <https://en.wikipedia.org/>;
+             schema:name ?enwikiTitle.
+  }
+  SERVICE wikibase:label {
+    bd:serviceParam wikibase:language "en".
+  }
 }
 ORDER BY DESC(?sitelinks)`;
 }
 
-export async function findMostNotablePerson(
+export async function findBirthplaceCandidates(
   cityId,
   { signal, fetcher = fetch } = {}
 ) {
-  const query = buildBirthplaceQuery(cityId);
   const params = new URLSearchParams({
-    query,
+    query: buildBirthplaceQuery(cityId),
     format: "json",
   });
 
@@ -61,30 +71,57 @@ export async function findMostNotablePerson(
   );
 
   if (!response.ok) {
-    throw new Error(`Wikidata returned HTTP ${response.status}`);
+    throw new Error(
+      `Wikidata returned HTTP ${response.status}`
+    );
   }
 
   const data = await response.json();
+  const bindings = data.results?.bindings ?? [];
 
-  const people = (data.results?.bindings ?? [])
-    .map((row) => {
-      const id = row.person?.value?.split("/").pop();
+  const byId = new Map();
 
-      if (!WIKIDATA_ID.test(id)) return null;
+  for (const row of bindings) {
+    const id = row.person?.value?.split("/").pop();
 
-      const sitelinks = Number(row.sitelinks?.value) || 0;
+    if (!WIKIDATA_ID.test(id)) continue;
 
-      return {
-        id,
-        name: row.personLabel?.value || id,
-        description:
-          row.personDescription?.value || "No description available",
-        sitelinks,
-        fameIndex: getFameIndex(sitelinks),
-        url: `https://www.wikidata.org/wiki/${id}`,
-      };
-    })
-    .filter(Boolean);
+    const sitelinks = Math.max(
+      0,
+      Number(row.sitelinks?.value) || 0
+    );
 
-  return rankPeople(people)[0] ?? null;
+    const person = {
+      id,
+      name: row.personLabel?.value || id,
+      description:
+        row.personDescription?.value ||
+        "No description available",
+      sitelinks,
+      fameIndex: getFameIndex(sitelinks),
+      enwikiTitle: row.enwikiTitle?.value ?? null,
+      url: `https://www.wikidata.org/wiki/${id}`,
+    };
+
+    if (
+      !byId.has(id) ||
+      sitelinks > byId.get(id).sitelinks
+    ) {
+      byId.set(id, person);
+    }
+  }
+
+  return {
+    people: rankPeople([...byId.values()]),
+    mayBeTruncated: bindings.length >= CANDIDATE_LIMIT,
+  };
+}
+
+export async function findMostNotablePerson(cityId, options) {
+  const { people } = await findBirthplaceCandidates(
+    cityId,
+    options
+  );
+
+  return people[0] ?? null;
 }
