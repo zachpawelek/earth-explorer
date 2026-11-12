@@ -39,7 +39,16 @@ export function buildGeoNamesCatalog(rows) {
 // Quantize view movements so tiny pointer changes do not re-sort thousands of
 // places every render. The exact camera still controls click/horizon checks.
 export function geoViewKey(view) {
-  return `${Math.round(view.latitude / 2)}:${Math.round(view.longitude / 2)}:${Math.round(view.distance * 10)}`;
+  // Finer angular movement and *logarithmic surface altitude* buckets at close zoom.
+  // Quantizing distance from the Earth's center to 0.1 units was too coarse when
+  // the camera could be only 0.018 units above the surface.
+  const step = view.distance < 1.08 ? 0.08 :
+    view.distance < 1.3 ? 0.2 : view.distance < 2 ? 0.75 : 2;
+  const lat = Math.round(view.latitude / step) * step;
+  const lon = Math.round(view.longitude / step) * step;
+  const altitude = Math.max(0.018, view.distance - 1);
+  const altitudeBucket = Math.round(Math.log(altitude) * 12);
+  return `${lat}:${lon}:${altitudeBucket}`;
 }
 
 export function selectGeoNamesPlaces(catalog, view, viewScale) {

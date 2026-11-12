@@ -5,7 +5,7 @@
 
 
 // These must match the distance limits on OrbitControls.
-export const MIN_CAMERA_DISTANCE = 1.2;
+export const MIN_CAMERA_DISTANCE = 1.018;
 export const MAX_CAMERA_DISTANCE = 6;
 
 // Read geographic direction and zoom from the camera position.

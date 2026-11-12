@@ -37,3 +37,15 @@ test("bad GeoNames rows are skipped safely", () => {
 test("camera view key is stable across tiny angle changes", () => {
   assert.equal(geoViewKey({ latitude: 1, longitude: 1, distance: 1.51 }), geoViewKey({ latitude: 1.1, longitude: 1.1, distance: 1.52 }));
 });
+
+
+test("GeoNames close-up key responds to fine geographic motion and surface zoom", () => {
+  assert.notEqual(
+    geoViewKey({ latitude: 0, longitude: 0, distance: 1.018 }),
+    geoViewKey({ latitude: 0, longitude: 0, distance: 1.026 })
+  );
+  assert.notEqual(
+    geoViewKey({ latitude: 0, longitude: 0, distance: 1.018 }),
+    geoViewKey({ latitude: 0, longitude: 0.16, distance: 1.018 })
+  );
+});

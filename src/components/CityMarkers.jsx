@@ -2,6 +2,8 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
+import { Vector3 } from "three";
+import { markerRadiusForPixels, cityLabelFontSize } from "../utils/markerSizing.js";
 import { latLonToCartesian } from "../utils/coordinates.js";
 import { loadGeoJSON } from "../utils/geographyCache.js";
 import { getViewScale } from "../utils/viewScale.js";
@@ -34,6 +36,8 @@ function getLabelLimit(cameraDistance) {
 export default function CityMarkers({ onCitySelect }) {
   const [cities, setCities] = useState([]);
   const labelRefs = useRef(new Map());
+  const markerRefs = useRef(new Map());
+  const projected = useRef(new Vector3());
 
   const [labelLimit, setLabelLimit] = useState(60);
   const labelLimitRef = useRef(60);
@@ -74,21 +78,21 @@ export default function CityMarkers({ onCitySelect }) {
               wikidataId: properties.WIKIDATAID || null,
               countryName: properties.ADM0NAME || null,
 
-              // Smaller orange markers, scaled by population.
-              markerRadius: 0.004 + 0.0045 * size,
+              // Relative marker prominence, converted to pixels when rendering.
+              markerPixels: 1.6 + 1.1 * size,
 
               normal: latLonToCartesian(latitude, longitude, 1),
 
               markerPosition: latLonToCartesian(
                 latitude,
                 longitude,
-                1.025
+                1.005
               ),
 
               labelPosition: latLonToCartesian(
                 latitude,
                 longitude,
-                1.05
+                1.008
               ),
             };
           })
@@ -135,55 +139,102 @@ export default function CityMarkers({ onCitySelect }) {
   }, [cities, labelLimit]);
 
   // Only process the cities that have text labels.
-  const labeledCities = useMemo(
-    () => cities.filter((city) => labelIds.has(city.id)),
-    [cities, labelIds]
-  );
+  const labeledCities = useMemo(() => {
+    const priority = { major: 2, medium: 1, minor: 0 };
+    return cities
+      .filter((city) => labelIds.has(city.id))
+      .sort((a, b) =>
+        priority[b.prominence] - priority[a.prominence] ||
+        b.population - a.population
+      );
+  }, [cities, labelIds]);
 
-  // Adjust label visibility as the globe rotates and zooms.
-  useFrame(({ camera }) => {
+  // Size the markers in screen pixels and show only nonoverlapping labels.
+  // Manipulate DOM/Three objects directly so camera movement doesn't cause
+  // 243 React component updates for every mouse-wheel event.
+  useFrame(({ camera, size: viewport }) => {
     const distance = camera.position.length();
     const horizon = 1 / distance;
+    const fov = camera.fov ?? 75;
+
+    for (const city of cities) {
+      const marker = markerRefs.current.get(city.id);
+      if (marker) {
+        const radius = markerRadiusForPixels(
+          distance, viewport.height, fov, city.markerPixels
+        );
+        marker.scale.setScalar(radius);
+      }
+    }
 
     const nextLimit = getLabelLimit(distance);
-
-    // Update React state only when entering a new zoom range.
     if (nextLimit !== labelLimitRef.current) {
       labelLimitRef.current = nextLimit;
       setLabelLimit(nextLimit);
     }
+
+    const occupied = [];
+    const maxLabels = distance >= 3.2 ? 12 : distance >= 2 ? 24 : 40;
 
     for (const city of labeledCities) {
       const label = labelRefs.current.get(city.id);
       if (!label) continue;
 
       const [x, y, z] = city.normal;
+      const facing = (
+        x * camera.position.x +
+        y * camera.position.y +
+        z * camera.position.z
+      ) / distance;
 
-      const facing =
-        (
-          x * camera.position.x +
-          y * camera.position.y +
-          z * camera.position.z
-        ) / distance;
-
-      // Fade labels as they approach the globe's horizon.
+      // Normalize fade to the *current* visible horizon. At very close
+      // zoom, (1 - horizon) is tiny, so a fixed 0.18 denominator would
+      // accidentally hide every label, including one at screen center.
       const horizonFade = clamp01(
-        (facing - horizon) / 0.18
+        (facing - horizon) / Math.max(0.001, (1 - horizon) * 0.35)
       );
-
-      // Less prominent cities require closer zoom.
-      const zoomFade =
-        city.prominence === "major"
-          ? 1
-          : city.prominence === "medium"
-            ? clamp01((5.5 - distance) / 1.5)
-            : clamp01((4 - distance) / 1.5);
-
+      const zoomFade = city.prominence === "major" ? 1 :
+        city.prominence === "medium" ? clamp01((5.5 - distance) / 1.5) :
+        clamp01((4 - distance) / 1.5);
       const opacity = horizonFade * zoomFade;
 
       label.style.opacity = String(opacity);
-      label.style.visibility =
-        opacity < 0.01 ? "hidden" : "visible";
+      if (opacity < 0.1 || occupied.length >= maxLabels) {
+        label.style.visibility = "hidden";
+        continue;
+      }
+
+      projected.current.set(...city.labelPosition).project(camera);
+      if (projected.current.z < -1 || projected.current.z > 1 ||
+          Math.abs(projected.current.x) > 0.95 ||
+          Math.abs(projected.current.y) > 0.95) {
+        label.style.visibility = "hidden";
+        continue;
+      }
+
+      const font = cityLabelFontSize(distance, city.prominence);
+      const centerX = (projected.current.x + 1) * viewport.width / 2;
+      const centerY = (1 - projected.current.y) * viewport.height / 2;
+      const halfWidth = Math.max(15, city.name.length * font * 0.3 + 6);
+      const halfHeight = font * 0.8 + 5;
+      const bounds = {
+        left: centerX - halfWidth, right: centerX + halfWidth,
+        top: centerY - halfHeight, bottom: centerY + halfHeight,
+      };
+
+      const overlap = occupied.some((other) =>
+        bounds.left < other.right && bounds.right > other.left &&
+        bounds.top < other.bottom && bounds.bottom > other.top
+      );
+
+      if (overlap) {
+        label.style.visibility = "hidden";
+        continue;
+      }
+
+      occupied.push(bounds);
+      label.style.fontSize = `${font.toFixed(1)}px`;
+      label.style.visibility = "visible";
     }
   });
 
@@ -194,6 +245,11 @@ export default function CityMarkers({ onCitySelect }) {
           {/* Every city keeps its clickable orange marker. */}
           <mesh
             position={city.markerPosition}
+            scale={0.003}
+            ref={(element) => {
+              if (element) markerRefs.current.set(city.id, element);
+              else markerRefs.current.delete(city.id);
+            }}
             onClick={(event) => {
               event.stopPropagation();
 
@@ -202,7 +258,7 @@ export default function CityMarkers({ onCitySelect }) {
               }
             }}
           >
-            <sphereGeometry args={[city.markerRadius, 10, 10]} />
+            <sphereGeometry args={[1, 8, 6]} />
             <meshBasicMaterial color="#ff9f43" />
           </mesh>
 
