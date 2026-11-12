@@ -318,3 +318,60 @@ body {
 @media (max-width: 900px) {
   .place-search { top: 108px; }
 }
+
+/* Biography thumbnail: compact and independent of the globe renderer. */
+.city-discovery-identity {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.city-discovery-identity-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.city-discovery-identity-text h3 {
+  margin-top: 0;
+}
+
+.person-portrait {
+  flex: 0 0 96px;
+  width: 96px;
+  margin: 0;
+}
+
+.person-portrait img,
+.person-portrait-placeholder {
+  display: block;
+  width: 96px;
+  height: 118px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.person-portrait img {
+  object-fit: contain;
+  object-position: center top;
+}
+
+.person-portrait-placeholder {
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  padding: 8px;
+  color: #91aabb;
+  font-size: 11px;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.person-portrait figcaption {
+  margin-top: 5px;
+  line-height: 1.2;
+}
+
+.city-discovery-panel .person-portrait figcaption a {
+  font-size: 10px;
+}

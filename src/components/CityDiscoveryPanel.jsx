@@ -8,6 +8,7 @@ import {
   } from "../utils/pantheonLookup.js";
 
   import ReadershipComparison from "./ReadershipComparison.jsx";
+import PersonPortrait from "./PersonPortrait.jsx";
 
 
 function PantheonEvidence({ person }) {
@@ -338,9 +339,13 @@ export default function CityDiscoveryPanel({ city, onClose }) {
 
       {person && (
         <div className="city-discovery-person">
-          <h3>{person.name}</h3>
-
-          <p>{person.description}</p>
+          <div className="city-discovery-identity">
+            <PersonPortrait key={person.id} person={person} />
+            <div className="city-discovery-identity-text">
+              <h3>{person.name}</h3>
+              <p>{person.description}</p>
+            </div>
+          </div>
 
           <div className="city-discovery-score">
             <strong>{person.fameIndex}/100</strong>
