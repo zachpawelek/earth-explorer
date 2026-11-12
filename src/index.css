@@ -90,40 +90,6 @@ body {
 .view-hud-error {
   color: #ffb4a2;
 }
-.city-label {
-  display: inline-block;
-  position: relative;
-  transform: translateY(-20px);
-
-  color: #fff7e8;
-  font-family: Arial, sans-serif;
-  font-size: 6px;
-  font-weight: 100;
-  line-height: 1;
-  white-space: nowrap;
-
-  text-shadow:
-    0 1px 3px #081421,
-    0 0 5px #081421;
-
-  pointer-events: none;
-  user-select: none;
-
-  opacity: 0;
-  transition: opacity 120ms linear;
-}
-
-.city-label--medium {
-  font-size: 7px;
-  font-weight: 300;
-}
-
-.city-label--major {
-  font-size: 8px;
-  font-weight: 500;
-}
-
-
 .city-discovery-panel {
   position: absolute;
   z-index: 20;
@@ -211,28 +177,6 @@ body {
     top: auto;
     bottom: 20px;
   }
-}
-
-/* One lightweight hover label for the additional towns. */
-.town-hover-label {
-  color: #fff5df;
-  background: rgba(7, 19, 33, 0.92);
-  padding: 3px 6px;
-  border-radius: 4px;
-  font-size: 10px;
-  white-space: nowrap;
-  pointer-events: none;
-}
-
-.local-town-label {
-  display: block;
-  color: #f5e8d5;
-  font: 500 10px/1.1 Arial, sans-serif;
-  white-space: nowrap;
-  pointer-events: none;
-  user-select: none;
-  text-shadow: 0 1px 3px #071321, 0 0 5px #071321;
-  transform: translateY(-12px);
 }
 
 /* Attribution required for the modified GeoNames CC BY 4.0 dataset. */
@@ -374,4 +318,44 @@ body {
 
 .city-discovery-panel .person-portrait figcaption a {
   font-size: 10px;
+}
+
+/* Milestone 12J: One indivisible, clickable dot + place name.
+   No additional marker meshes are rendered when labels are rejected. */
+.place-pair {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  padding: 3px 5px 3px 4px;
+  border: 0;
+  border-radius: 4px;
+  background: rgba(7, 19, 33, 0.52);
+  color: #f8eddc;
+  font-family: Arial, sans-serif;
+  line-height: 1.1;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  text-shadow: 0 1px 3px #071321;
+  transform: translate(-7px, -50%);
+}
+.place-pair:hover,
+.place-pair:focus-visible,
+.place-pair--selected {
+  background: rgba(7, 19, 33, 0.93);
+  outline: 1px solid #76d9b9;
+}
+.place-pair__dot {
+  display: inline-block;
+  flex: 0 0 5px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #ffb26a;
+  box-shadow: 0 0 3px rgba(255, 178, 106, 0.55);
+}
+.place-pair__name {
+  display: inline-block;
 }

@@ -14,15 +14,13 @@ import CountryBorders from "./components/CountryBorders.jsx";
 import Admin1Borders from "./components/Admin1Borders.jsx";
 import { loadGeoJSON } from "./utils/geographyCache.js";
 import { findCountryName } from "./utils/countryLookup.js";
-import CityMarkers from "./components/CityMarkers.jsx";
-import TownMarkers from "./components/TownMarkers.jsx";
+import PlacePairs from "./components/PlacePairs.jsx";
 import CityDiscoveryPanel from "./components/CityDiscoveryPanel.jsx";
 import PlaceSearch from "./components/PlaceSearch.jsx";
 
 
 function App() {
   const globeRef = useRef(null);
-  const townPickerRef = useRef(null);
 
 
 const [countries, setCountries] = useState(null);
@@ -66,15 +64,7 @@ useEffect(() => {
 
 
     function handleGlobeClick(event) {
-      // Pick the nearest visible town using screen pixels, even when its
-      // rendered dot is only 2–3 pixels wide.
       if (event.delta > 5) return;
-      const pickedTown = townPickerRef.current?.pick(event);
-      if (pickedTown) {
-        event.stopPropagation();
-        handleCitySelect(pickedTown);
-        return;
-      }
       if (!countries) return;
     
       const { x, y, z } = event.point;
@@ -129,8 +119,6 @@ useEffect(() => {
         globeRef={globeRef}
         texture={rendered?.texture ?? null}
         onGlobeClick={handleGlobeClick}
-        onGlobePointerMove={(event) => townPickerRef.current?.hover(event)}
-        onGlobePointerOut={() => townPickerRef.current?.clearHover()}
       />
       
 
@@ -141,8 +129,12 @@ useEffect(() => {
       <Coastlines
         positions={rendered?.positions ?? null}
       />
-      <CityMarkers onCitySelect={handleCitySelect} />
-      <TownMarkers view={view} viewScale={viewScale} pickerRef={townPickerRef} />
+      <PlacePairs
+        view={view}
+        viewScale={viewScale}
+        selectedCity={selectedCity}
+        onCitySelect={handleCitySelect}
+      />
 
       <Admin1Borders view={view} />
       <CountryBorders />

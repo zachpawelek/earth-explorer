@@ -1,11 +1,9 @@
 
-export default function GlobeSurface({ globeRef, texture, onGlobeClick, onGlobePointerMove, onGlobePointerOut }) {
+export default function GlobeSurface({ globeRef, texture, onGlobeClick }) {
     return (
       <mesh
         ref={globeRef}
         onClick={onGlobeClick}
-        onPointerMove={onGlobePointerMove}
-        onPointerOut={onGlobePointerOut}
         rotation={[0, -Math.PI / 2, 0]}
       >
         {/* Our spherical globe geometry. */}
