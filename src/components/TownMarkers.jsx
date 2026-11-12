@@ -5,10 +5,10 @@ import { Object3D, Vector3 } from "three";
 import { latLonToCartesian } from "../utils/coordinates.js";
 import { isTownFacingCamera } from "../utils/townCatalog.js";
 import {
-  hitTargetRadiusForPixels,
   markerRadiusForPixels,
   localTownFontSize,
 } from "../utils/markerSizing.js";
+import { buildScreenPlaceIndex, pickScreenPlace } from "../utils/screenPlacePicker.js";
 import {
   buildGeoNamesCatalog,
   loadGeoNamesRows,
@@ -23,11 +23,14 @@ function overlaps(a, b) {
     a.top < b.bottom && a.bottom > b.top;
 }
 
-export default function TownMarkers({ view, viewScale, onCitySelect }) {
+export default function TownMarkers({ view, viewScale, pickerRef }) {
   const camera = useThree((state) => state.camera);
+  const gl = useThree((state) => state.gl);
   const viewport = useThree((state) => state.size);
   const meshRef = useRef(null);
-  const hitMeshRef = useRef(null);
+  const pickIndexRef = useRef(null);
+  const lastPickRef = useRef({ list: null, timestamp: -Infinity });
+  const pickPoint = useRef(new Vector3());
   const markerDummy = useRef(new Object3D());
   const lastMarkers = useRef({ list: null, radius: -1 });
   const [catalog, setCatalog] = useState(null);
@@ -62,16 +65,18 @@ export default function TownMarkers({ view, viewScale, onCitySelect }) {
   }, [viewKey]);
 
   const visibleTowns = useMemo(
-    () => selectGeoNamesPlaces(catalog, quantizedView, viewScale),
-    [catalog, quantizedView, viewScale]
+    () => selectGeoNamesPlaces(catalog, quantizedView, viewScale, {
+      fov: camera.fov ?? 75,
+      aspect: viewport.width / Math.max(1, viewport.height),
+    }),
+    [catalog, quantizedView, viewScale, camera.fov, viewport.width, viewport.height]
   );
 
   // Only recompute thousands of instance matrices when candidate places change
   // or their screen-pixel radius would change meaningfully.
   useFrame(({ camera: activeCamera, size }) => {
     const mesh = meshRef.current;
-    const hitMesh = hitMeshRef.current;
-    if (!mesh || !hitMesh) return;
+    if (!mesh) return;
 
     const baseRadius = markerRadiusForPixels(
       activeCamera.position.length(), size.height, activeCamera.fov ?? 75, 1
@@ -90,20 +95,9 @@ export default function TownMarkers({ view, viewScale, onCitySelect }) {
       marker.updateMatrix();
       mesh.setMatrixAt(index, marker.matrix);
 
-      // A second instanced layer follows the same towns but has a larger
-      // invisible sphere for raycasting, without increasing visible clutter.
-      const hitRadius = hitTargetRadiusForPixels(
-        marker.position.distanceTo(activeCamera.position),
-        size.height, activeCamera.fov ?? 75
-      );
-      marker.scale.setScalar(hitRadius);
-      marker.updateMatrix();
-      hitMesh.setMatrixAt(index, marker.matrix);
     }
     mesh.count = visibleTowns.length;
-    hitMesh.count = visibleTowns.length;
     mesh.instanceMatrix.needsUpdate = true;
-    hitMesh.instanceMatrix.needsUpdate = true;
     lastMarkers.current = { list: visibleTowns, radius: baseRadius };
   });
 
@@ -143,10 +137,64 @@ export default function TownMarkers({ view, viewScale, onCitySelect }) {
     return labels;
   }, [visibleTowns, quantizedView, viewScale, camera, viewport.width, viewport.height]);
 
-  function getTownAtPointer(event) {
-    const town = visibleTowns[event.instanceId];
-    return town && isTownFacingCamera(town, camera.position) ? town : null;
+  // Re-project only the selected and visible towns, on-demand. During camera
+  // motion the screen index is refreshed at most every 70 ms. A click always
+  // refreshes against the *current* camera, avoiding stale/different towns.
+  function updateScreenIndex(force = false) {
+    const timestamp = performance.now();
+    const old = lastPickRef.current;
+    const moved = old.position && old.position.distanceToSquared(camera.position) > 0.00000001;
+    const stale = timestamp - old.timestamp > 70;
+    if (!force && pickIndexRef.current && old.list === visibleTowns &&
+        old.width === viewport.width && old.height === viewport.height &&
+        (!moved || !stale)) return;
+
+    camera.updateMatrixWorld();
+    const width = viewport.width;
+    const height = viewport.height;
+    const point = pickPoint.current;
+    pickIndexRef.current = buildScreenPlaceIndex(visibleTowns, (town) => {
+      if (!isTownFacingCamera(town, camera.position)) return null;
+      point.set(...latLonToCartesian(town.latitude, town.longitude, 1.005)).project(camera);
+      if (point.z < -1 || point.z > 1 || Math.abs(point.x) > 1.05 || Math.abs(point.y) > 1.05) {
+        return null;
+      }
+      return { x: (point.x + 1) * width / 2, y: (1 - point.y) * height / 2 };
+    });
+    lastPickRef.current = {
+      list: visibleTowns, timestamp, width: viewport.width, height: viewport.height,
+      position: camera.position.clone(),
+    };
   }
+
+  function pickTown(event, force = false) {
+    const source = event.sourceEvent ?? event;
+    const rect = gl.domElement.getBoundingClientRect();
+    if (!rect.width || !rect.height || !Number.isFinite(source.clientX) ||
+        !Number.isFinite(source.clientY)) return null;
+    updateScreenIndex(force);
+    const x = (source.clientX - rect.left) * viewport.width / rect.width;
+    const y = (source.clientY - rect.top) * viewport.height / rect.height;
+    return pickScreenPlace(pickIndexRef.current, x, y);
+  }
+
+  // The globe itself receives mouse events, rather than raycasting thousands
+  // of extra invisible meshes. Keep callbacks current as visible towns change.
+  useEffect(() => {
+    if (!pickerRef) return;
+    const picker = {
+      pick: (event) => pickTown(event, true),
+      hover: (event) => {
+        const town = pickTown(event);
+        setHovered((old) => old?.id === town?.id ? old : town);
+      },
+      clearHover: () => setHovered(null),
+    };
+    pickerRef.current = picker;
+    return () => {
+      if (pickerRef.current === picker) pickerRef.current = null;
+    };
+  });
 
   const activeHover = hovered && visibleTowns.some((town) => town.id === hovered.id)
     ? hovered : null;
@@ -158,38 +206,10 @@ export default function TownMarkers({ view, viewScale, onCitySelect }) {
         ref={meshRef}
         args={[undefined, undefined, MESH_CAPACITY]}
         frustumCulled={false}
+        raycast={() => {}}
       >
         <sphereGeometry args={[1, 6, 4]} />
         <meshBasicMaterial color="#ffd08a" />
-      </instancedMesh>
-
-      {/* Only this invisible instanced layer receives pointer events. Its
-          instance indices match visibleTowns and the visible markers. */}
-      <instancedMesh
-        ref={hitMeshRef}
-        args={[undefined, undefined, MESH_CAPACITY]}
-        frustumCulled={false}
-        onPointerMove={(event) => {
-          const town = getTownAtPointer(event);
-          if (town) event.stopPropagation();
-          setHovered((previous) => previous?.id === town?.id ? previous : town);
-        }}
-        onPointerOut={() => setHovered(null)}
-        onClick={(event) => {
-          if (event.delta > 5) return;
-          const town = getTownAtPointer(event);
-          if (!town) return;
-          event.stopPropagation();
-          onCitySelect(town);
-        }}
-      >
-        <sphereGeometry args={[1, 8, 6]} />
-        <meshBasicMaterial
-          transparent
-          opacity={0}
-          colorWrite={false}
-          depthWrite={false}
-        />
       </instancedMesh>
 
       {localLabels.map((town) => (

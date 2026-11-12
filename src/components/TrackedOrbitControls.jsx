@@ -12,11 +12,33 @@ import {
 import { interpolateGlobeFlight } from "../utils/globeFlight.js";
 
 const FLIGHT_SECONDS = 1.2;
+// Camera motion runs at full speed; React/UI updates can be much less frequent.
+const VIEW_REPORT_INTERVAL_MS = 90;
 
 export default function TrackedOrbitControls({ onViewChange, focusTarget }) {
   const { camera, invalidate } = useThree();
   const controlsRef = useRef(null);
   const flightRef = useRef(null);
+  const lastReport = useRef(-Infinity);
+  const trailingReport = useRef(null);
+
+  const reportView = useCallback((force = false) => {
+    const now = performance.now();
+    if (force || now - lastReport.current >= VIEW_REPORT_INTERVAL_MS) {
+      if (trailingReport.current !== null) {
+        clearTimeout(trailingReport.current);
+        trailingReport.current = null;
+      }
+      lastReport.current = now;
+      onViewChange(getViewMetrics(camera.position));
+    } else if (trailingReport.current === null) {
+      trailingReport.current = setTimeout(() => {
+        trailingReport.current = null;
+        lastReport.current = performance.now();
+        onViewChange(getViewMetrics(camera.position));
+      }, Math.max(0, VIEW_REPORT_INTERVAL_MS - (now - lastReport.current)));
+    }
+  }, [camera, onViewChange]);
 
   const handleChange = useCallback(() => {
     const distance = camera.position.length();
@@ -24,12 +46,18 @@ export default function TrackedOrbitControls({ onViewChange, focusTarget }) {
       controlsRef.current.rotateSpeed = getRotationSpeed(distance);
       controlsRef.current.zoomSpeed = getZoomSpeed(distance);
     }
-    onViewChange(getViewMetrics(camera.position));
-  }, [camera, onViewChange]);
+    reportView();
+  }, [camera, reportView]);
 
   useEffect(() => {
-    handleChange();
-  }, [handleChange]);
+    reportView(true);
+    return () => {
+      if (trailingReport.current !== null) {
+        clearTimeout(trailingReport.current);
+        trailingReport.current = null;
+      }
+    };
+  }, [reportView]);
 
   // Search results trigger a short, controlled move to the selected location.
   // User mouse/touch interaction immediately cancels the animation.
@@ -73,6 +101,7 @@ export default function TrackedOrbitControls({ onViewChange, focusTarget }) {
       maxDistance={MAX_CAMERA_DISTANCE}
       onStart={() => { flightRef.current = null; }}
       onChange={handleChange}
+      onEnd={() => reportView(true)}
     />
   );
 }

@@ -22,6 +22,7 @@ import PlaceSearch from "./components/PlaceSearch.jsx";
 
 function App() {
   const globeRef = useRef(null);
+  const townPickerRef = useRef(null);
 
 
 const [countries, setCountries] = useState(null);
@@ -65,8 +66,16 @@ useEffect(() => {
 
 
     function handleGlobeClick(event) {
-      // Ignore dragging or clicks before country data is loaded.
-      if (event.delta > 5 || !countries) return;
+      // Pick the nearest visible town using screen pixels, even when its
+      // rendered dot is only 2–3 pixels wide.
+      if (event.delta > 5) return;
+      const pickedTown = townPickerRef.current?.pick(event);
+      if (pickedTown) {
+        event.stopPropagation();
+        handleCitySelect(pickedTown);
+        return;
+      }
+      if (!countries) return;
     
       const { x, y, z } = event.point;
       const radius = Math.hypot(x, y, z);
@@ -107,6 +116,7 @@ useEffect(() => {
     <Canvas
       camera={{ position: [0, 0, 3], near: 0.002, far: 30 }}
       frameloop="demand"
+      dpr={[1, 1.5]}
     >
       <ambientLight intensity={0.5} />
 
@@ -119,6 +129,8 @@ useEffect(() => {
         globeRef={globeRef}
         texture={rendered?.texture ?? null}
         onGlobeClick={handleGlobeClick}
+        onGlobePointerMove={(event) => townPickerRef.current?.hover(event)}
+        onGlobePointerOut={() => townPickerRef.current?.clearHover()}
       />
       
 
@@ -130,9 +142,9 @@ useEffect(() => {
         positions={rendered?.positions ?? null}
       />
       <CityMarkers onCitySelect={handleCitySelect} />
-      <TownMarkers view={view} viewScale={viewScale} onCitySelect={handleCitySelect} />
+      <TownMarkers view={view} viewScale={viewScale} pickerRef={townPickerRef} />
 
-      <Admin1Borders cameraDistance={view.distance} />
+      <Admin1Borders view={view} />
       <CountryBorders />
 
 

@@ -51,13 +51,79 @@ export function geoViewKey(view) {
   return `${lat}:${lon}:${altitudeBucket}`;
 }
 
-export function selectGeoNamesPlaces(catalog, view, viewScale) {
+
+// The globe's visible hemisphere is much larger than the camera viewport
+// at street/town zoom. Compute a conservative viewport cone so we don't
+// render or raycast thousands of markers that are outside the screen.
+export function visibleAngularRadius(cameraDistance, fovDegrees = 75, aspect = 1.6) {
+  if (!Number.isFinite(cameraDistance) || cameraDistance <= 1) return 0;
+  const horizon = Math.acos(1 / cameraDistance);
+  if (!Number.isFinite(fovDegrees) || fovDegrees <= 0 || fovDegrees >= 180 ||
+      !Number.isFinite(aspect) || aspect <= 0) return horizon;
+
+  const halfVerticalFov = fovDegrees * DEG / 2;
+  // A diagonal cone encloses the rectangular viewport; add 12% padding.
+  const diagonalAngle = Math.atan(
+    Math.tan(halfVerticalFov) * Math.hypot(1, aspect) * 1.12
+  );
+  const demand = cameraDistance * Math.sin(diagonalAngle);
+  if (demand >= 1) return horizon;
+  const angularRadius = Math.asin(demand) - diagonalAngle;
+  // Allow extra room for camera-view quantization and marker hit targets.
+  return Math.min(horizon, Math.max(0, angularRadius) + 0.012);
+}
+
+// Retain only the strongest N candidates as we scan. The root of this
+// bounded heap is the *worst* retained place, so we avoid sorting or storing
+// tens of thousands of off-priority candidates on every map movement.
+function comparePlaceRank(a, b) {
+  return b.priority - a.priority || b.population - a.population ||
+    a.id.localeCompare(b.id);
+}
+
+function retainTopPlace(heap, candidate, limit) {
+  if (heap.length < limit) {
+    heap.push(candidate);
+    let index = heap.length - 1;
+    while (index > 0) {
+      const parent = (index - 1) >> 1;
+      if (comparePlaceRank(heap[index], heap[parent]) <= 0) break;
+      [heap[index], heap[parent]] = [heap[parent], heap[index]];
+      index = parent;
+    }
+    return;
+  }
+  if (comparePlaceRank(candidate, heap[0]) >= 0) return;
+  heap[0] = candidate;
+  let index = 0;
+  while (true) {
+    const left = index * 2 + 1;
+    const right = left + 1;
+    let worst = index;
+    if (left < heap.length && comparePlaceRank(heap[left], heap[worst]) > 0) {
+      worst = left;
+    }
+    if (right < heap.length && comparePlaceRank(heap[right], heap[worst]) > 0) {
+      worst = right;
+    }
+    if (worst === index) break;
+    [heap[index], heap[worst]] = [heap[worst], heap[index]];
+    index = worst;
+  }
+}
+
+export function selectGeoNamesPlaces(catalog, view, viewScale, cameraOptions = {}) {
   if (!catalog || viewScale === "Global") return [];
 
   const [vx, vy, vz] = direction(view.latitude, view.longitude);
   const distance = Math.max(1.01, view.distance);
   const horizon = 1 / distance;
-  const margin = Math.cos(Math.acos(horizon) + 0.16); // bucket corners
+  const angularRadius = visibleAngularRadius(
+    distance, cameraOptions.fov ?? 75, cameraOptions.aspect ?? 1.6
+  );
+  const visibleCosine = Math.cos(angularRadius);
+  // Each 8° bucket can extend roughly 6° from its center.
+  const margin = Math.cos(Math.min(Math.PI, angularRadius + 0.13));
   const regional = viewScale === "Regional";
   const limit = regional ? REGIONAL_LIMIT : CLOSE_LIMIT;
   const candidates = [];
@@ -73,22 +139,21 @@ export function selectGeoNamesPlaces(catalog, view, viewScale) {
 
       const [x, y, z] = direction(latitude, longitude);
       const facing = x * vx + y * vy + z * vz;
-      if (facing <= horizon + 0.003) continue;
+      if (facing <= horizon + 0.003 || facing < visibleCosine) continue;
 
       const priority = 3 * facing + Math.log10(Math.max(0, population) + 1) / 9 + (important ? 0.05 : 0);
-      candidates.push({
+      retainTopPlace(candidates, {
         id: `geonames-${id}`,
         geonameId: String(id),
         name, latitude, longitude, population,
         countryCode, countryName: countryCode, admin1, featureCode,
         wikidataId: null,
         priority,
-      });
+      }, limit);
     }
   }
 
-  candidates.sort((a, b) => b.priority - a.priority || b.population - a.population || a.id.localeCompare(b.id));
-  return candidates.slice(0, limit);
+  return candidates.sort(comparePlaceRank);
 }
 
 // Share one parsed GeoNames download between map markers and the search box.
