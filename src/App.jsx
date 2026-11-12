@@ -16,6 +16,7 @@ import { findCountryName } from "./utils/countryLookup.js";
 import CityMarkers from "./components/CityMarkers.jsx";
 import TownMarkers from "./components/TownMarkers.jsx";
 import CityDiscoveryPanel from "./components/CityDiscoveryPanel.jsx";
+import PlaceSearch from "./components/PlaceSearch.jsx";
 
 
 function App() {
@@ -26,6 +27,7 @@ const [countries, setCountries] = useState(null);
 const [countryLoadError, setCountryLoadError] = useState(false);
 const [selectedCountry, setSelectedCountry] = useState(undefined);
 const [selectedCity, setSelectedCity] = useState(null);
+const [focusTarget, setFocusTarget] = useState(null);
 
 useEffect(() => {
   let active = true;
@@ -91,8 +93,13 @@ useEffect(() => {
       setSelectedCity({ ...city, countryName: countryName || city.countryName });
       setSelectedCountry(countryName);
     }
-    
 
+    function handleSearchSelect(place) {
+      // Use the exact GeoNames identifier for small-place discovery rather
+      // than guessing a Wikidata entity from a potentially shared name.
+      handleCitySelect(place);
+      setFocusTarget({ latitude: place.latitude, longitude: place.longitude });
+    }
 
   return (
     <div className="globe-layout">
@@ -130,9 +137,11 @@ useEffect(() => {
 
 
       {/* Coming from Drei  */}
-      <TrackedOrbitControls onViewChange={setView} />
+      <TrackedOrbitControls onViewChange={setView} focusTarget={focusTarget} />
     </Canvas>
 
+
+    <PlaceSearch onSelect={handleSearchSelect} />
 
     <CityDiscoveryPanel
     city={selectedCity}

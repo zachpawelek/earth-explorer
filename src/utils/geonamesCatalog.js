@@ -90,3 +90,27 @@ export function selectGeoNamesPlaces(catalog, view, viewScale) {
   candidates.sort((a, b) => b.priority - a.priority || b.population - a.population || a.id.localeCompare(b.id));
   return candidates.slice(0, limit);
 }
+
+// Share one parsed GeoNames download between map markers and the search box.
+// Do not cancel the shared fetch when one consumer unmounts.
+let rowsPromise;
+export function loadGeoNamesRows() {
+  if (!rowsPromise) {
+    rowsPromise = fetch("/data/geonames-cities500.json")
+      .then((response) => {
+        if (!response.ok) throw new Error(`GeoNames HTTP ${response.status}`);
+        return response.json();
+      })
+      .then((payload) => {
+        if (!Array.isArray(payload.places)) {
+          throw new Error("GeoNames catalog has no places array");
+        }
+        return payload.places;
+      })
+      .catch((error) => {
+        rowsPromise = undefined;
+        throw error;
+      });
+  }
+  return rowsPromise;
+}

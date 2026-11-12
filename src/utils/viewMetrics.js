@@ -8,6 +8,34 @@
 export const MIN_CAMERA_DISTANCE = 1.018;
 export const MAX_CAMERA_DISTANCE = 6;
 
+// OrbitControls rotates the globe around its center rather than panning
+// geographically. At town-level zoom a small angular rotation moves the
+// camera across a huge real-world distance, so reduce drag sensitivity there.
+export function getRotationSpeed(cameraDistance) {
+  const minSpeed = 0.06;
+  const maxSpeed = 0.5;
+  if (!Number.isFinite(cameraDistance)) return minSpeed;
+
+  const t = Math.max(0, Math.min(1,
+    (cameraDistance - MIN_CAMERA_DISTANCE) / (3.2 - MIN_CAMERA_DISTANCE)
+  ));
+  return minSpeed + (maxSpeed - minSpeed) * t;
+}
+
+// Match OrbitControls' wheel dolly sensitivity to the current globe scale.
+// Both zoom directions become more precise near the surface, where a small
+// camera-distance change can otherwise cross many streets at once.
+export function getZoomSpeed(cameraDistance) {
+  const minSpeed = 0.12;
+  const maxSpeed = 0.65;
+  if (!Number.isFinite(cameraDistance)) return minSpeed;
+
+  const t = Math.max(0, Math.min(1,
+    (cameraDistance - MIN_CAMERA_DISTANCE) / (3.2 - MIN_CAMERA_DISTANCE)
+  ));
+  return minSpeed + (maxSpeed - minSpeed) * t;
+}
+
 // Read geographic direction and zoom from the camera position.
 export function getViewMetrics(cameraPosition) {
   const { x, y, z } = cameraPosition;

@@ -248,3 +248,73 @@ body {
   font: 11px Arial, sans-serif;
 }
 .data-attribution a { color: #76d9b9; }
+
+/* On-demand search across major cities and GeoNames towns. */
+.place-search {
+  position: absolute;
+  z-index: 30;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(340px, calc(100% - 32px));
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
+  color: #f7f5ef;
+}
+.place-search-label {
+  display: block;
+  font-size: 11px;
+  color: #b4cad8;
+  margin-bottom: 5px;
+}
+.place-search input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 12px;
+  border: 1px solid rgba(255,255,255,.3);
+  border-radius: 7px;
+  outline: none;
+  color: #f7f5ef;
+  background: rgba(7,19,33,.96);
+  font: 14px Arial, sans-serif;
+}
+.place-search input:focus { border-color: #76d9b9; }
+.place-search-results {
+  overflow-y: auto;
+  max-height: 320px;
+  margin-top: 5px;
+  padding: 4px;
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 7px;
+  background: rgba(7,19,33,.98);
+  box-shadow: 0 10px 30px rgba(0,0,0,.32);
+}
+.place-search-results p {
+  padding: 10px;
+  margin: 0;
+  font-size: 12px;
+  color: #b4cad8;
+}
+.place-search-result {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: #f7f5ef;
+  text-align: left;
+  cursor: pointer;
+  font: 13px Arial, sans-serif;
+}
+.place-search-result:hover,
+.place-search-result:focus-visible { background: rgba(118,217,185,.15); }
+.place-search-result small {
+  margin-top: 3px;
+  font-size: 11px;
+  color: #adc3cf;
+}
+@media (max-width: 900px) {
+  .place-search { top: 108px; }
+}

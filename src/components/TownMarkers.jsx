@@ -4,14 +4,18 @@ import { Html } from "@react-three/drei";
 import { Object3D, Vector3 } from "three";
 import { latLonToCartesian } from "../utils/coordinates.js";
 import { isTownFacingCamera } from "../utils/townCatalog.js";
-import { markerRadiusForPixels, localTownFontSize } from "../utils/markerSizing.js";
+import {
+  hitTargetRadiusForPixels,
+  markerRadiusForPixels,
+  localTownFontSize,
+} from "../utils/markerSizing.js";
 import {
   buildGeoNamesCatalog,
+  loadGeoNamesRows,
   geoViewKey,
   selectGeoNamesPlaces,
 } from "../utils/geonamesCatalog.js";
 
-const DATA_URL = "/data/geonames-cities500.json";
 const MESH_CAPACITY = 7500;
 
 function overlaps(a, b) {
@@ -23,6 +27,7 @@ export default function TownMarkers({ view, viewScale, onCitySelect }) {
   const camera = useThree((state) => state.camera);
   const viewport = useThree((state) => state.size);
   const meshRef = useRef(null);
+  const hitMeshRef = useRef(null);
   const markerDummy = useRef(new Object3D());
   const lastMarkers = useRef({ list: null, radius: -1 });
   const [catalog, setCatalog] = useState(null);
@@ -31,23 +36,19 @@ export default function TownMarkers({ view, viewScale, onCitySelect }) {
   // Defer loading the large catalog until the camera reaches regional scale.
   useEffect(() => {
     if (viewScale === "Global" || catalog) return;
-    const controller = new AbortController();
-    fetch(DATA_URL, { signal: controller.signal })
-      .then((response) => {
-        if (!response.ok) throw new Error(`GeoNames HTTP ${response.status}`);
-        return response.json();
-      })
-      .then((payload) => {
-        if (!controller.signal.aborted) {
-          const nextCatalog = buildGeoNamesCatalog(payload.places ?? []);
+    let active = true;
+    loadGeoNamesRows()
+      .then((rows) => {
+        if (active) {
+          const nextCatalog = buildGeoNamesCatalog(rows);
           setCatalog(nextCatalog);
           console.info(`GeoNames: loaded ${nextCatalog.count} places`);
         }
       })
       .catch((error) => {
-        if (error.name !== "AbortError") console.error("GeoNames loading failed:", error);
+        if (active) console.error("GeoNames loading failed:", error);
       });
-    return () => controller.abort();
+    return () => { active = false; };
   }, [viewScale, catalog]);
 
   const viewKey = geoViewKey(view);
@@ -69,7 +70,8 @@ export default function TownMarkers({ view, viewScale, onCitySelect }) {
   // or their screen-pixel radius would change meaningfully.
   useFrame(({ camera: activeCamera, size }) => {
     const mesh = meshRef.current;
-    if (!mesh) return;
+    const hitMesh = hitMeshRef.current;
+    if (!mesh || !hitMesh) return;
 
     const baseRadius = markerRadiusForPixels(
       activeCamera.position.length(), size.height, activeCamera.fov ?? 75, 1
@@ -87,9 +89,21 @@ export default function TownMarkers({ view, viewScale, onCitySelect }) {
       marker.scale.setScalar(radius);
       marker.updateMatrix();
       mesh.setMatrixAt(index, marker.matrix);
+
+      // A second instanced layer follows the same towns but has a larger
+      // invisible sphere for raycasting, without increasing visible clutter.
+      const hitRadius = hitTargetRadiusForPixels(
+        marker.position.distanceTo(activeCamera.position),
+        size.height, activeCamera.fov ?? 75
+      );
+      marker.scale.setScalar(hitRadius);
+      marker.updateMatrix();
+      hitMesh.setMatrixAt(index, marker.matrix);
     }
     mesh.count = visibleTowns.length;
+    hitMesh.count = visibleTowns.length;
     mesh.instanceMatrix.needsUpdate = true;
+    hitMesh.instanceMatrix.needsUpdate = true;
     lastMarkers.current = { list: visibleTowns, radius: baseRadius };
   });
 
@@ -144,6 +158,17 @@ export default function TownMarkers({ view, viewScale, onCitySelect }) {
         ref={meshRef}
         args={[undefined, undefined, MESH_CAPACITY]}
         frustumCulled={false}
+      >
+        <sphereGeometry args={[1, 6, 4]} />
+        <meshBasicMaterial color="#ffd08a" />
+      </instancedMesh>
+
+      {/* Only this invisible instanced layer receives pointer events. Its
+          instance indices match visibleTowns and the visible markers. */}
+      <instancedMesh
+        ref={hitMeshRef}
+        args={[undefined, undefined, MESH_CAPACITY]}
+        frustumCulled={false}
         onPointerMove={(event) => {
           const town = getTownAtPointer(event);
           if (town) event.stopPropagation();
@@ -158,8 +183,13 @@ export default function TownMarkers({ view, viewScale, onCitySelect }) {
           onCitySelect(town);
         }}
       >
-        <sphereGeometry args={[1, 6, 4]} />
-        <meshBasicMaterial color="#ffd08a" />
+        <sphereGeometry args={[1, 8, 6]} />
+        <meshBasicMaterial
+          transparent
+          opacity={0}
+          colorWrite={false}
+          depthWrite={false}
+        />
       </instancedMesh>
 
       {localLabels.map((town) => (

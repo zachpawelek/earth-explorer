@@ -3,7 +3,12 @@ import { useEffect, useRef, useState, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import { Vector3 } from "three";
-import { markerRadiusForPixels, cityLabelFontSize } from "../utils/markerSizing.js";
+import {
+  markerRadiusForPixels,
+  markerHitScale,
+  hitTargetRadiusForPixels,
+  cityLabelFontSize,
+} from "../utils/markerSizing.js";
 import { latLonToCartesian } from "../utils/coordinates.js";
 import { loadGeoJSON } from "../utils/geographyCache.js";
 import { getViewScale } from "../utils/viewScale.js";
@@ -37,6 +42,7 @@ export default function CityMarkers({ onCitySelect }) {
   const [cities, setCities] = useState([]);
   const labelRefs = useRef(new Map());
   const markerRefs = useRef(new Map());
+  const hitRefs = useRef(new Map());
   const projected = useRef(new Vector3());
 
   const [labelLimit, setLabelLimit] = useState(60);
@@ -164,6 +170,21 @@ export default function CityMarkers({ onCitySelect }) {
           distance, viewport.height, fov, city.markerPixels
         );
         marker.scale.setScalar(radius);
+
+        const hit = hitRefs.current.get(city.id);
+        if (hit && radius > 0) {
+          // Use this marker's actual distance from the camera so outer-edge
+          // towns are as clickable as dots in the center of the screen.
+          const [mx, my, mz] = city.markerPosition;
+          const depth = Math.hypot(
+            camera.position.x - mx,
+            camera.position.y - my,
+            camera.position.z - mz,
+          );
+          hit.scale.setScalar(
+            hitTargetRadiusForPixels(depth, viewport.height, fov) / radius
+          );
+        }
       }
     }
 
@@ -243,24 +264,42 @@ export default function CityMarkers({ onCitySelect }) {
       {cities.map((city) => (
         <group key={city.id}>
           {/* Every city keeps its clickable orange marker. */}
-          <mesh
+          {/* The visible sphere stays ~2px in radius, but a transparent
+              child sphere provides an ~18px-wide click target. Scaling the
+              parent updates both sizes together as the camera zooms. */}
+          <group
             position={city.markerPosition}
             scale={0.003}
             ref={(element) => {
               if (element) markerRefs.current.set(city.id, element);
               else markerRefs.current.delete(city.id);
             }}
-            onClick={(event) => {
-              event.stopPropagation();
-
-              if (event.delta <= 5) {
-                onCitySelect(city);
-              }
-            }}
           >
-            <sphereGeometry args={[1, 8, 6]} />
-            <meshBasicMaterial color="#ff9f43" />
-          </mesh>
+            <mesh>
+              <sphereGeometry args={[1, 8, 6]} />
+              <meshBasicMaterial color="#ff9f43" />
+            </mesh>
+            <mesh
+              scale={markerHitScale(city.markerPixels)}
+              ref={(element) => {
+                if (element) hitRefs.current.set(city.id, element);
+                else hitRefs.current.delete(city.id);
+              }}
+              onClick={(event) => {
+                if (event.delta > 5) return;
+                event.stopPropagation();
+                onCitySelect(city);
+              }}
+            >
+              <sphereGeometry args={[1, 8, 6]} />
+              <meshBasicMaterial
+                transparent
+                opacity={0}
+                colorWrite={false}
+                depthWrite={false}
+              />
+            </mesh>
+          </group>
 
           {/* Only selected cities receive an HTML text label. */}
           {labelIds.has(city.id) && (

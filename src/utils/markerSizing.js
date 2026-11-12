@@ -1,3 +1,35 @@
+// Interactive targets are substantially larger than the visible dot.
+// This is a *radius*, so the clickable area spans about 18 screen pixels.
+export const MARKER_HIT_RADIUS_PX = 9;
+
+export function markerHitScale(visibleRadiusPixels) {
+  if (!Number.isFinite(visibleRadiusPixels) || visibleRadiusPixels <= 0) {
+    return 1;
+  }
+  return Math.max(1, MARKER_HIT_RADIUS_PX / visibleRadiusPixels);
+}
+
+// Unlike visible markers, selection targets should NOT use the small
+// world-radius cap in markerRadiusForPixels: that cap would make them tiny
+// on screen at regional zoom. Depth is the camera-to-marker distance.
+export function hitTargetRadiusForPixels(
+  depth,
+  viewportHeight,
+  fovDegrees,
+  pixels = MARKER_HIT_RADIUS_PX,
+) {
+  if (![depth, viewportHeight, fovDegrees, pixels].every(Number.isFinite) ||
+      depth <= 0 || viewportHeight <= 0 || fovDegrees <= 0 ||
+      fovDegrees >= 180 || pixels <= 0) {
+    return 0.0001;
+  }
+
+  const halfFov = (fovDegrees * Math.PI / 180) / 2;
+  return Math.max(0.00001, Math.min(0.15,
+    pixels * 2 * depth * Math.tan(halfFov) / viewportHeight
+  ));
+}
+
 // Keep marker radii approximately constant in screen pixels as the camera
 // approaches the unit-radius globe. Unlike fixed-world-size meshes, these
 // won't turn into huge circles at town-level zoom.
