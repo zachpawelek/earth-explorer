@@ -145,8 +145,14 @@ export default function PlacePairs({ view, viewScale, selectedCity, onCitySelect
         >
           <button
             type="button"
-            className={`place-pair${selectedCity?.id === place.id ? " place-pair--selected" : ""}`}
-            style={{ fontSize: `${place.fontSize}px`, pointerEvents: "auto" }}
+            className={`place-pair place-pair--${place.tone}${selectedCity?.id === place.id ? " place-pair--selected" : ""}`}
+            style={{
+              fontSize: `${place.fontSize}px`,
+              fontWeight: place.fontWeight,
+              "--dot-size": `${place.dotSize}px`,
+              "--dot-half": `${place.dotSize / 2}px`,
+              pointerEvents: "auto",
+            }}
             aria-label={`Explore ${place.name}`}
             title={place.countryName ? `${place.name}, ${place.countryName}` : place.name}
             onClick={(event) => {

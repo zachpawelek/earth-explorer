@@ -339,7 +339,16 @@ body {
   cursor: pointer;
   user-select: none;
   text-shadow: 0 1px 3px #071321;
-  transform: translate(-7px, -50%);
+  /* Anchor the DOT center on the geographic coordinate, regardless of size. */
+  transform: translate(calc(-4px - var(--dot-half, 2.5px)), -50%);
+}
+.place-pair--subtle {
+  color: #c5d5e2;
+  background: rgba(7, 19, 33, 0.22);
+}
+.place-pair--prominent {
+  color: #fff7e7;
+  background: rgba(7, 19, 33, 0.76);
 }
 .place-pair:hover,
 .place-pair:focus-visible,
@@ -349,12 +358,19 @@ body {
 }
 .place-pair__dot {
   display: inline-block;
-  flex: 0 0 5px;
-  width: 5px;
-  height: 5px;
+  flex: 0 0 var(--dot-size, 5px);
+  width: var(--dot-size, 5px);
+  height: var(--dot-size, 5px);
   border-radius: 50%;
   background: #ffb26a;
   box-shadow: 0 0 3px rgba(255, 178, 106, 0.55);
+}
+.place-pair--subtle .place-pair__dot {
+  background: #dca777;
+  box-shadow: none;
+}
+.place-pair--prominent .place-pair__dot {
+  box-shadow: 0 0 5px rgba(255, 178, 106, 0.7);
 }
 .place-pair__name {
   display: inline-block;

@@ -1,4 +1,4 @@
-import { cityLabelFontSize, localTownFontSize } from "./markerSizing.js";
+import { getPlaceVisuals } from "./placeProminence.js";
 
 // Both the dot and the name live in one HTML element. This planner returns
 // only complete, non-overlapping pairs; a rejected label has no marker.
@@ -45,17 +45,16 @@ export function layoutPlacePairs({
     const point = project(place);
     if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) continue;
 
-    const fontSize = place.kind === "major"
-      ? cityLabelFontSize(distance, place.prominence)
-      : localTownFontSize(distance);
-    // Text is to the RIGHT of the dot, both in the same clickable element.
-    // Conservative widths prevent ambiguous overlaps on a crowded globe.
-    const widthEstimate = Math.max(24, place.name.length * fontSize * 0.65);
+    const visuals = getPlaceVisuals(place, distance);
+    // Reserve the full dot + gap + variable-size name when testing overlaps.
+    // If the pair doesn't fit, neither its dot nor its name is rendered.
+    const nameWidth = Math.max(24, place.name.length * visuals.fontSize * 0.7);
+    const halfHeight = Math.max(visuals.fontSize * 1.1, visuals.dotSize) / 2 + 5;
     const bounds = {
-      left: point.x - 10,
-      right: point.x + widthEstimate + 17,
-      top: point.y - fontSize * 0.75 - 7,
-      bottom: point.y + fontSize * 0.75 + 7,
+      left: point.x - visuals.dotSize / 2 - 6,
+      right: point.x + visuals.dotSize / 2 + 5 + nameWidth + 7,
+      top: point.y - halfHeight,
+      bottom: point.y + halfHeight,
     };
 
     if (bounds.left < 6 || bounds.right > width - 6 ||
@@ -63,7 +62,7 @@ export function layoutPlacePairs({
         occupied.some((other) => intersects(bounds, other))) continue;
 
     occupied.push(bounds);
-    selected.push({ ...place, fontSize: Math.round(fontSize * 2) / 2 });
+    selected.push({ ...place, ...visuals });
   }
 
   return selected;
@@ -73,6 +72,9 @@ export function samePlacePairs(before, after) {
   return before.length === after.length && before.every((entry, index) =>
     entry.id === after[index].id &&
     entry.fontSize === after[index].fontSize &&
+    entry.dotSize === after[index].dotSize &&
+    entry.fontWeight === after[index].fontWeight &&
+    entry.tone === after[index].tone &&
     entry.name === after[index].name
   );
 }

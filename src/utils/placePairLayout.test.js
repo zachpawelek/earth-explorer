@@ -60,3 +60,18 @@ test("Stable layouts can be reused without rerendering", () => {
   assert.ok(samePlacePairs(a, b));
   assert.ok(!samePlacePairs(a, []));
 });
+
+test("A bigger city reserves more collision space than a small town", () => {
+  const high = { ...major("big", "Springfield", 100, 100), population: 6_000_000 };
+  const low = { ...town("small", "Near", 305, 100), population: 70 };
+  const result = plan([high], [low]);
+  assert.deepEqual(result.map((p) => p.id), ["big", "small"]);
+  assert.ok(result[0].dotSize > result[1].dotSize);
+  assert.ok(result[0].fontSize > result[1].fontSize);
+});
+
+test("A changed dot size triggers a layout refresh", () => {
+  const a = plan([major("a", "City", 100, 100)], []);
+  const b = [{ ...a[0], dotSize: a[0].dotSize + 1 }];
+  assert.ok(!samePlacePairs(a, b));
+});
