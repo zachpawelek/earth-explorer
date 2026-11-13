@@ -17,6 +17,7 @@ import { findCountryName } from "./utils/countryLookup.js";
 import PlacePairs from "./components/PlacePairs.jsx";
 import CityDiscoveryPanel from "./components/CityDiscoveryPanel.jsx";
 import PlaceSearch from "./components/PlaceSearch.jsx";
+import LocalBasemap from "./components/LocalBasemap.jsx";
 
 
 function App() {
@@ -129,6 +130,7 @@ useEffect(() => {
       <Coastlines
         positions={rendered?.positions ?? null}
       />
+      <LocalBasemap view={view} />
       <PlacePairs
         view={view}
         viewScale={viewScale}
@@ -170,6 +172,12 @@ useEffect(() => {
         Additional populated places: <a href="https://www.geonames.org/" target="_blank" rel="noopener noreferrer">GeoNames</a>
         {" · "}<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>
         {" · "}Modified for Earth Explorer
+        {import.meta.env.VITE_CARTO_BASEMAP_KEY && (
+          <>
+            {" · "}Local basemap: <a href="https://carto.com/attributions" target="_blank" rel="noopener noreferrer">© CARTO</a>
+            {" · "}<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a>
+          </>
+        )}
       </div>
     </div>
   );
